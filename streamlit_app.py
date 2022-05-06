@@ -136,7 +136,11 @@ total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'conne
 
 mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
 #mod.to_csv('/content/module.csv') 
+clist = mod
+country = st.sidebar.selectbox("Select a module:",clist)
+
 module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
+module=country
 #
 
 # 6. Select an inverter from the SAM database
