@@ -28,11 +28,12 @@ import numpy as np
 
 st.title('Technical and Financial Model of a PV system')
 
-DATE_COLUMN = 'date/time'
-DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
-            'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
+#DATE_COLUMN = 'date/time'
+#DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
+#            'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
 
 @st.cache
+'''
 def load_data(nrows):
     data = pd.read_csv(DATA_URL, nrows=nrows)
     lowercase = lambda x: str(x).lower()
@@ -40,20 +41,23 @@ def load_data(nrows):
     data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
     return data
 
-data_load_state = st.text('Loading data...')
-data = load_data(10000)
-data_load_state.text("Done! (using st.cache)")
+
+#data_load_state = st.text('Loading data...')
+#data = load_data(10000)
+#data_load_state.text("Done! (using st.cache)")
 
 if st.checkbox('Show raw data'):
     st.subheader('Raw data')
     st.write(data)
+'''
+
 
 ## 1. Enter the location of the PV system and obtain a weather file for that location
 st.subheader('Enter the location of the PV system and obtain a weather file for that location')
-lat = st.number_input('Insert the latitude')
+lat = st.number_input('Insert the latitude, example =29.99 ')
 #lat=29.99
 #st.write('The current number is ', lat)
-lon= st.number_input('Insert the longitude')
+lon= st.number_input('Insert the longitude, example = -91.89')
 #st.write('The current number is ', lon)
 #lon=-91.89
 
@@ -64,12 +68,12 @@ system_size= 5 # in MW in dc
 
 NREL_API_KEY2 = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
 NREL_API_KEY='lOHyZqGMvZfGXResGGPtdvceWLyUnCtabZ1Ngbkt'
-#NREL_API_KEY = st.text_input('NREL_API_KEY', 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3')
+NREL_API_KEY = st.text_input('NREL_API_KEY', 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3')
 #st.write('The NREL_API_KEY is', NREL_API_KEY)
 
 email1='atiqureee@gmail.com'
 email='atiqureee111@gmail.com'
-#email = st.text_input('email', 'atiqureee@gmail.com')
+email = st.text_input('email', 'atiqureee@gmail.com')
 #st.write('The email is', email)
 
 
@@ -385,18 +389,18 @@ st.write("Net Present Value(npv) : ", a)
 #energy_month=energy_month.T
 
 st.subheader('monthly production')
-hist_values1 = np.histogram(energy_month, bins=12, range=(0,12))
+#hist_values1 = np.histogram(energy_month, bins=12, range=(0,12))
 st.bar_chart(energy_month,width=4)
 
 
 
-st.subheader('Number of pickups by hour')
-hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
-st.bar_chart(hist_values)
+#st.subheader('Number of pickups by hour')
+#hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
+#st.bar_chart(hist_values)
 
 # Some number in the range 0-23
-hour_to_filter = st.slider('hour', 0, 23, 17)
-filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
+#hour_to_filter = st.slider('hour', 0, 23, 17)
+#filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
 
-st.subheader('Map of all pickups at %s:00' % hour_to_filter)
-st.map(filtered_data)
+#st.subheader('Map of all pickups at %s:00' % hour_to_filter)
+#st.map(filtered_data)
