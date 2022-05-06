@@ -162,7 +162,7 @@ select_inverter2=clist[clist['index'] == select_inverter]
 inverter=select_inverter2.T.to_dict()
 st.write('inverter',inverter)
 
-max_string_design_voltage = inverter['Vdcmax']
+max_string_design_voltage = inverter[0]['Vdcmax']
 min_db_temp_ashrae=-3.7     #ASHRAE_Extreme_Annual_Mean_Minimum_Design_Dry_Bulb Temperature (Tmin)
 max_db_temp_ashrae= 36.6    #ASHRAE 2% Annual Design Dry Bulb Temperature (Tmax)#
 
@@ -179,7 +179,7 @@ dc_ac_ratio=inverter[0]['Pdco']/inverter[0]['Paco']
 inverter_STC_watts=inverter[0]['Paco']*dc_ac_ratio
 single_module_power=module[0]['Vmpo']*module[0]['Impo']
 T_add= 25 # temp adder
-min_module_vmp= module['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
+min_module_vmp= module[0]['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
 min_module_series_ideal=math.ceil(inverter['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
 min_module_series_okay=math.ceil(inverter['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
 
