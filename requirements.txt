@@ -1,6 +1,6 @@
 git+https://github.com/pvlib/pvlib-python
 git+https://github.com/plantpredict/python-sdk
 git+https://github.com/numpy/numpy-financial
-streamlit==0.86.0
+streamlit==0.87.0
 git+https://github.com/PablocFonseca/streamlit-aggrid
 matplotlib==3.4.1
