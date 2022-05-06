@@ -26,6 +26,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+from st_aggrid import AgGrid
+
+
 st.title('Technical and Financial Model of a PV system')
 DATE_COLUMN = 'date/time'
 DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
@@ -112,6 +115,17 @@ salvage_cost=salvage_value
 #st.write('installed_cost=',installed_cost)
 
 total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'connections':0, 'lid':0, 'nameplate_rating':0, 'age':0, 'availability':0}
+
+
+st.write('losses values in percentage')
+lossdataframe = pd.DataFrame({'soiling': [2], 'shading':[0], 'snow':[0], 'mismatch':[2], 'wiring':[2], 'connections':[0], 'lid':[0], 'nameplate_rating':[0], 'age':[0], 'availability':[0]})
+grid_return = AgGrid(lossdataframe, editable=True)
+new_df = grid_return['data']
+
+
+st.dataframe(new_df) 
+
+
 mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
 #mod.to_csv('/content/module.csv') 
 module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
