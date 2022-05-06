@@ -47,13 +47,20 @@ data_load_state.text("Done! (using st.cache)")
 if st.checkbox('Show raw data'):
     st.subheader('Raw data')
     st.write(data)
-            
+
+## 1. Enter the location of the PV system and obtain a weather file for that location
+st.subheader('Enter the location of the PV system and obtain a weather file for that location')
 lat = st.number_input('Insert the latitude')
 lat=29.99
 #st.write('The current number is ', lat)
 lon= st.number_input('Insert the longitude')
 #st.write('The current number is ', lon)
 lon=-91.89
+
+alt=13
+## 2. Enter the approximate desired annual energy production (kWh/year)
+system_size= 5 # in MW in dc
+
 
 NREL_API_KEY2 = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
 NREL_API_KEY='lOHyZqGMvZfGXResGGPtdvceWLyUnCtabZ1Ngbkt'
