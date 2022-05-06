@@ -143,7 +143,7 @@ select_module = st.sidebar.selectbox("Select a module:",clist)
 st.write('module list', clist)
 
 select_module2=clist[clist['index'] == select_module]
-module=select_module2.T
+module=select_module2.T.to_dict()
 st.write('module',module)
 
 #
@@ -159,7 +159,7 @@ max_string_design_voltage = inverter['Vdcmax']
 min_db_temp_ashrae=-3.7     #ASHRAE_Extreme_Annual_Mean_Minimum_Design_Dry_Bulb Temperature (Tmin)
 max_db_temp_ashrae= 36.6    #ASHRAE 2% Annual Design Dry Bulb Temperature (Tmax)#
 
-module['Bvoco%/C']=(module['Bvoco']/module['Voco'])*100
+module[0]['Bvoco%/C']=(module['Bvoco']/module['Voco'])*100
 module['Bvmpo%/C']=(module['Bvmpo']/module['Vmpo'])*100
 module['Aimpo%/C']=(module['Aimp']/module['Impo'])*100
 module['TPmpo%/C']=module['Bvmpo%/C']+module['Aimpo%/C']
