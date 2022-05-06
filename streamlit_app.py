@@ -146,7 +146,7 @@ st.write('module list', clist)
 
 select_module2=clist[clist['index'] == select_module]
 
-index_value=clist.loc[clist['index'] == select_module]
+index_value=clist[clist['index'] == select_module].index.tolist()
 st.write('index',index_value)
 module=select_module2.T.to_dict()
 #index_value=clist.columns.get_loc(select_module2)
