@@ -277,13 +277,13 @@ mc = ModelChain(system, location,losses_model='pvwatts')
 #mc.run_model(weather)
 mc.run_model_from_effective_irradiance(weather)
 mc.results.aoi
-mc.results.cell_temperature
-mc.results.dc.to_dict()
+st.write('cell temperature in C', mc.results.cell_temperature)
+#mc.results.dc.to_dict()
 ac_result=mc.results.ac.to_dict()
 #ac_result.loc[ac_result<0]=0
 #ac_result.loc[ac_result<0]
 ac_result
-energy_production=(pd.DataFrame.from_dict(ac_result, orient='index', columns=['energy_production'])*number_of_inverters_needed)/1000  ##in kW
+energy_production=(pd.DataFrame.from_dict(ac_result, orient='index', columns=['energy_production in kWh'])*number_of_inverters_needed)/1000  ##in kW
 energy_production.replace( np.nan, 0, inplace=True)
 energy_month=energy_production.resample('M').sum()*(3600/3600)   # kWh
 energy_month
@@ -336,7 +336,7 @@ st.write('System_Efficiency in %',System_Efficiency*100)
 ## a. Estimated installed cost (before credits and rebates)
 
 
-st.write('installed_cost',installed_cost)
+#st.write('installed_cost',installed_cost)
 # b. Total Capital Cost
 
 Total_Capital_Cost=installed_cost-federal_tax_credit-state_tax_credit
@@ -356,9 +356,9 @@ Utility_energy_cost_LCC=energy_cost_first_year*RPWF
 st.write('Utility_energy_cost_LCC in $',Utility_energy_cost_LCC)
 
 maintenance_value=annual_maintenance_costs*RPWF
-st.write('maintenance_costs_value',maintenance_value)
+#st.write('maintenance_costs_value',maintenance_value)
 salvage_value=salvage_cost*single_pwf
-st.write('salvage_value',salvage_value)
+#st.write('salvage_value',salvage_value)
 
 
 PV_Life_cycle_cost=Total_Capital_Cost+maintenance_value-salvage_value
@@ -384,8 +384,8 @@ st.write('Simple_Payback_Period',Simple_Payback_Period)
 
 
 #f. Net Present Value of Project
-Net_Present_Value_of_Project=Total_Capital_Cost*single_pwf
-st.write('Net_Present_Value_of_Project',Net_Present_Value_of_Project)
+#Net_Present_Value_of_Project=Total_Capital_Cost*single_pwf
+#st.write('Net_Present_Value_of_Project',Net_Present_Value_of_Project)
 
 ## Python program explaining pv() function
 import numpy_financial as npf
