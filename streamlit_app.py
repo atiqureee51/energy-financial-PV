@@ -43,15 +43,15 @@ data_load_state = st.text('Loading data...')
 data = load_data(10000)
 data_load_state.text("Done! (using st.cache)")
 
-if st.checkbox('Show raw data'):
-    st.subheader('Raw data')
-    st.write(data)
+#if st.checkbox('Show raw data'):
+#    st.subheader('Raw data')
+#    st.write(data)
 
 
 #st.subheader('Raw data')
 ## 1. Enter the location of the PV system and obtain a weather file for that location
 
-#st.subheader('Enter the location of the PV system and obtain a weather file for that location')
+st.subheader('Enter the location of the PV system and obtain a weather file for that location')
 
 lat = st.number_input('Insert the latitude, example =29.99 ')
 #lat=29.99
@@ -77,6 +77,11 @@ email = st.text_input('email', 'atiqureee@gmail.com')
 
 
 weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names='2010', interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
+
+if st.checkbox('Show raw data'):
+    st.subheader('Raw data')
+    st.write(weather)
+
 
 ## 3. Enter the following financial information:
 installed_cost=4328468.17    #($/kWdc)
