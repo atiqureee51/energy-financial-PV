@@ -237,7 +237,9 @@ else:
             min_index_dc_ac_ratio = ratio
             st.write(min_index_dc_ac_ratio)
             max_parallel_string=max_string
-            no_of_series_module=min_module_series_okay      
+            no_of_series_module=min_module_series_okay 
+            if max_string==0:
+                      max_parallel_string=1  
 
 
 
