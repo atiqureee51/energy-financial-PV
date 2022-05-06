@@ -42,11 +42,11 @@ if st.checkbox('Show raw data'):
     st.write(data)
             
 lat = st.number_input('Insert the latitude')
-#lat=29.99
+lat=29.99
 #st.write('The current number is ', lat)
 lon= st.number_input('Insert the longitude')
 #st.write('The current number is ', lon)
-#lon=-91.89
+lon=-91.89
 
 NREL_API_KEY2 = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
 NREL_API_KEY='lOHyZqGMvZfGXResGGPtdvceWLyUnCtabZ1Ngbkt'
