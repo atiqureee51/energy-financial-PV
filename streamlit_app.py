@@ -53,14 +53,14 @@ data_load_state.text("Done! (using st.cache)")
 
 st.subheader('Enter the location of the PV system and obtain a weather file for that location')
 
-lat = st.number_input('Insert the latitude, example =29.99 ')
+lat = st.number_input('Insert the latitude, example =29.99 ',value=29.99,)
 #lat=29.99
 #st.write('The current number is ', lat)
-lon= st.number_input('Insert the longitude, example = -91.89')
+lon= st.number_input('Insert the longitude, example = -91.89',value=-91.89)
 #st.write('The current number is ', lon)
 #lon=-91.89
 
-alt=13
+alt=st.number_input('Insert the altitude, example =13 ',value=13)
 ## 2. Enter the approximate desired annual energy production (kWh/year)
 system_size= 5 # in MW in dc
 
