@@ -26,7 +26,18 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+from st_aggrid import AgGrid, DataReturnMode, GridUpdateMode, GridOptionsBuilder
 
+@st.cache()
+def get_data():
+    df = pd.DataFrame(
+        np.random.randint(0, 100, 100).reshape(-1, 5), columns=list("abcde")
+    )
+    return df
+
+df = get_data()
+AgGrid(df, key='grid1')
+AgGrid(df,  key='grid2')
 
 
 st.title('Technical and Financial Model of a PV system')
