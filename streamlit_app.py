@@ -140,7 +140,7 @@ module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
 clist = mod.T
 clist.reset_index(inplace=True)
 select_module = st.sidebar.selectbox("Select a module:",clist)
-index_value=df.index.values
+index_value=select_module.index.values
 st.write('index',index_value)
 st.write('module list', clist)
 
