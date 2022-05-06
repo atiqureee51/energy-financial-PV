@@ -26,8 +26,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-import st_aggrid
-from st_aggrid import AgGrid
+
 
 
 st.title('Technical and Financial Model of a PV system')
@@ -117,14 +116,15 @@ salvage_cost=salvage_value
 
 total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'connections':0, 'lid':0, 'nameplate_rating':0, 'age':0, 'availability':0}
 
+#import st_aggrid
+#from st_aggrid import AgGrid
+#st.write('losses values in percentage')
+#lossdataframe = pd.DataFrame({'soiling': [2], 'shading':[0], 'snow':[0], 'mismatch':[2], 'wiring':[2], 'connections':[0], 'lid':[0], 'nameplate_rating':[0], 'age':[0], 'availability':[0]})
+#grid_return = AgGrid(lossdataframe, editable=True)
+#new_df = grid_return['data']
 
-st.write('losses values in percentage')
-lossdataframe = pd.DataFrame({'soiling': [2], 'shading':[0], 'snow':[0], 'mismatch':[2], 'wiring':[2], 'connections':[0], 'lid':[0], 'nameplate_rating':[0], 'age':[0], 'availability':[0]})
-grid_return = AgGrid(lossdataframe, editable=True)
-new_df = grid_return['data']
 
-
-st.dataframe(new_df) 
+#st.dataframe(new_df) 
 
 
 mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
