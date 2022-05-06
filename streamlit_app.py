@@ -186,7 +186,7 @@ max_string_design_voltage = inverter['Vdcmax']
 min_db_temp_ashrae=-3.7     #ASHRAE_Extreme_Annual_Mean_Minimum_Design_Dry_Bulb Temperature (Tmin)
 max_db_temp_ashrae= 36.6    #ASHRAE 2% Annual Design Dry Bulb Temperature (Tmax)#
 
-module[['Bvoco%/C']=(module['Bvoco']/module['Voco'])*100
+module['Bvoco%/C']=(module['Bvoco']/module['Voco'])*100
 module[index_mod]['Bvmpo%/C']=(module[index_mod]['Bvmpo']/module[index_mod]['Vmpo'])*100
 module[index_mod]['Aimpo%/C']=(module[index_mod]['Aimp']/module[index_mod]['Impo'])*100
 module[index_mod]['TPmpo%/C']=module[index_mod]['Bvmpo%/C']+module[index_mod]['Aimpo%/C']
