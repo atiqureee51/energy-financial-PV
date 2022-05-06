@@ -140,14 +140,13 @@ module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
 clist = mod.T
 clist.reset_index(inplace=True)
 select_module = st.sidebar.selectbox("Select a module:",clist)
-#index_value=select_module.index.values
-#st.write('index',index_value)
 st.write('module list', clist)
 
 select_module2=clist[clist['index'] == select_module]
 
 index_value=clist[clist['index'] == select_module].index.tolist()
-st.write('index',index_value)
+index_module = np.asarray(index_value)
+st.write('index',index_module)
 module=select_module2.T.to_dict()
 #index_value=clist.columns.get_loc(select_module2)
 #st.write('index',index_value)
