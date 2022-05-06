@@ -49,15 +49,15 @@ lon= st.number_input('Insert the longitude')
 #lon=-91.89
 
 NREL_API_KEY = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
-NREL_API_KEY = st.text_input('NREL_API_KEY', 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3')
+#NREL_API_KEY = st.text_input('NREL_API_KEY', 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3')
 #st.write('The NREL_API_KEY is', NREL_API_KEY)
 
 email='atiqureee@gmail.com'
-email = st.text_input('email', 'atiqureee@gmail.com')
+#email = st.text_input('email', 'atiqureee@gmail.com')
 #st.write('The email is', email)
 
 
-weather, metadata=pvlib.iotools.get_psm3(lat==lat, lon==lon, NREL_API_KEY=NREL_API_KEY , email==email, names='2010', interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
+weather, metadata=pvlib.iotools.get_psm3(lat==lat, lon==lon, NREL_API_KEY==NREL_API_KEY , email==email, names='2010', interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
 
 ## 3. Enter the following financial information:
 installed_cost=4328468.17    #($/kWdc)
