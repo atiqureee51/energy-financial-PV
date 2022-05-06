@@ -179,9 +179,9 @@ dc_ac_ratio=inverter[0]['Pdco']/inverter[0]['Paco']
 inverter_STC_watts=inverter[0]['Paco']*dc_ac_ratio
 single_module_power=module[0]['Vmpo']*module[0]['Impo']
 T_add= 25 # temp adder
-min_module_vmp= module[0]['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
-min_module_series_ideal=math.ceil(inverter['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
-min_module_series_okay=math.ceil(inverter['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
+min_module_vmp= module[0]['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module[0]['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
+min_module_series_ideal=math.ceil(inverter[0]['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
+min_module_series_okay=math.ceil(inverter[0]['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
 
 
 
@@ -193,8 +193,8 @@ series_module=[]
 for i in range(min_module_series_okay,max_module_series+1,1):
   #st.write(i)
   source_circuit=single_module_power*i
-  max_string=int(inverter['Pdco']/source_circuit)
-  ratio=max_string*single_module_power*i/inverter['Paco']
+  max_string=int(inverter[0]['Pdco']/source_circuit)
+  ratio=max_string*single_module_power*i/inverter[0]['Paco']
   diff_r=abs(dc_ac_ratio-ratio)
   diff_ratio.append(diff_r)
   circuit_dc_ac_ratio.append(ratio)
@@ -221,12 +221,12 @@ st.write('no_of_series_module',no_of_series_module)
 
 # b. Calculate number of inverters needed to meet annual energy production goal
 
-number_of_inverters_needed=math.ceil(system_size*1E6/inverter['Pdco'])
+number_of_inverters_needed=math.ceil(system_size*1E6/inverter[0]['Pdco'])
 st.write('number_of_inverters_needed:',number_of_inverters_needed)
 
 # 8. Calculate the total AC and DC system size, and DC/AC ratio
-total_AC_system_size=inverter['Paco']*number_of_inverters_needed
-total_DC_system_size=inverter['Pdco']*number_of_inverters_needed
+total_AC_system_size=inverter[0]['Paco']*number_of_inverters_needed
+total_DC_system_size=inverter[0]['Pdco']*number_of_inverters_needed
 dc_ac_ratio=total_DC_system_size/total_AC_system_size
 st.write('dc_ac_ratio:',dc_ac_ratio)
 
@@ -287,10 +287,10 @@ temperature_model_parameters = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_g
 
 #https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.pvsystem.PVSystem.html#pvlib.pvsystem.PVSystem
 system=pvlib.pvsystem.PVSystem(arrays=None, surface_tilt=racking_parameters['surface_tilt'], surface_azimuth=racking_parameters['surface_azimuth'], 
-                        albedo=0.2, surface_type=None, module='SunPower_SPR_300_WHT__2007__E__', 
+                        albedo=0.2, surface_type=None, module=None, 
                         module_type=None, module_parameters=module, 
                         temperature_model_parameters=temperature_model_parameters, modules_per_string=no_of_series_module, 
-                        strings_per_inverter=max_parallel_string, inverter='Huawei_Technologies_Co___Ltd___SUN2000_33KTL_US__480V_', inverter_parameters=inverter, 
+                        strings_per_inverter=max_parallel_string, inverter=None, inverter_parameters=inverter, 
                         racking_model='open_rack', losses_parameters=total_loss , name=None)
 
 
@@ -351,7 +351,7 @@ Capacity_Factor=((annual_energy_production.values)/(single_module_power*max_para
 st.write('Capacity Factor in %',Capacity_Factor*100)
 
 ## g. System Efficiency
-System_Efficiency=((annual_energy_production.values)/(poa_sum*max_parallel_string*no_of_series_module*number_of_inverters_needed*module['Area']))*1000
+System_Efficiency=((annual_energy_production.values)/(poa_sum*max_parallel_string*no_of_series_module*number_of_inverters_needed*module[0]['Area']))*1000
 st.write('System_Efficiency in %',System_Efficiency*100)
 
 
