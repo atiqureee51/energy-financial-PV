@@ -323,7 +323,7 @@ poa_wh_m2=(env_data['poa_global']*(3600/3600))  ##wh/m2
 poa_sum=poa_wh_m2.resample('Y').sum().to_numpy()
 Reference_Yield=poa_sum/1000 ##kwh/m2
 st.write('Reference_Yield kWh/m2',Reference_Yield)
-st.write('poa sum kWh/m2',poa_sum)
+#st.write('poa sum kWh/m2',poa_sum)
 
 ## e. Performance Ratio
 Performance_Ratio=Final_Yield/Reference_Yield
