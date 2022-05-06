@@ -78,8 +78,8 @@ email = st.text_input('email', 'atiqureee@gmail.com')
 
 weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names='2010', interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
 
-if st.checkbox('Show raw data'):
-    st.subheader('Raw data')
+if st.checkbox('Show raw weather data'):
+    st.subheader('Raw downloaded weather data')
     st.write(weather)
 
 
@@ -93,16 +93,16 @@ rebates_percent=st.number_input('Insert rebate in % ',value=0 )
 rebates= rebates_percent/100          #(itc OR Investment tax credit % of installed cost)
 
 interest_rate=st.number_input('Insert the interest in % ',value=4 )/100       #(annual percentage rate)
-project_life=25       #(years)
-annual_maintenance_costs= 15000         #($)
-years_to_inverter_replacement=10   #(years)
-inverter_cost=10000          #($/kWac)
-salvage_value=0.05*installed_cost          #(%)
-variable_operating_costs =0.0     #($/kWh) 0.1
-electricity_rate=0.10  #$/kWh      # $/kWh    0r 100 in $/MWh retail rate or PPA price ($/kWh)
-term_of_loan=25   # years
-amount_financed=100  ##(%)
-annual_payments=3  #(%) 
+project_life=st.number_input('Insert the project life in years ',value=25 )       #(years)
+annual_maintenance_costs= st.number_input('Insert the annual maintenace cost in $ ',value=15000 )         #($)
+years_to_inverter_replacement=st.number_input('Insert the years to replace inverters ',value=10 )   #(years)
+inverter_cost=st.number_input('Insert the inverter cost in $ ',value=10000 )           #($/kWac)
+salvage_value=(st.number_input('Insert the salvage value in % of installed cost ',value=5 )/100)*installed_cost          #(%)
+variable_operating_costs =st.number_input('Insert the variable operating cost in $/kWh ',value=0 )     #($/kWh) 0.1
+electricity_rate=st.number_input('Insert the electricity rate in $/kWh ',value=0.1 )  #$/kWh      # $/kWh    0r 100 in $/MWh retail rate or PPA price ($/kWh)
+term_of_loan=st.number_input('Insert the loan term in years ',value=25 )  # years
+amount_financed=st.number_input('Insert the amount financed in % ',value=100 )/100  ##(%)
+annual_payments=st.number_input('Insert the number of annual payment ',value=3 )  #(%) 
 discount_rate=interest_rate  
 year=project_life
 voc=variable_operating_costs   ##$/kWh
