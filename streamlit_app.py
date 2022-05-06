@@ -211,21 +211,34 @@ parallel_string=[]
 circuit_dc_ac_ratio=[]
 diff_ratio=[]
 series_module=[]
-for i in range(min_module_series_okay,max_module_series+1,1):
-  #st.write(i)
-  source_circuit=single_module_power*i
-  max_string=int(inverter['Pdco']/source_circuit)
-  ratio=max_string*single_module_power*i/inverter['Paco']
-  diff_r=abs(dc_ac_ratio-ratio)
-  diff_ratio.append(diff_r)
-  circuit_dc_ac_ratio.append(ratio)
-  parallel_string.append(max_string)
-  source_circuit_STC_power.append(source_circuit)
-  series_module.append(i)
-min_index_dc_ac_ratio = diff_ratio.index(min(diff_ratio))
-st.write(min_index_dc_ac_ratio)
-max_parallel_string=parallel_string[min_index_dc_ac_ratio]
-no_of_series_module=series_module[min_index_dc_ac_ratio]
+
+if max_module_series>=min_module_series_okay:
+            for i in range(min_module_series_okay,max_module_series+1,1):
+              #st.write(i)
+              source_circuit=single_module_power*i
+              max_string=int(inverter['Pdco']/source_circuit)
+              ratio=max_string*single_module_power*i/inverter['Paco']
+              diff_r=abs(dc_ac_ratio-ratio)
+              diff_ratio.append(diff_r)
+              circuit_dc_ac_ratio.append(ratio)
+              parallel_string.append(max_string)
+              source_circuit_STC_power.append(source_circuit)
+              series_module.append(i)
+            min_index_dc_ac_ratio = diff_ratio.index(min(diff_ratio))
+            st.write(min_index_dc_ac_ratio)
+            max_parallel_string=parallel_string[min_index_dc_ac_ratio]
+            no_of_series_module=series_module[min_index_dc_ac_ratio]
+elif:
+            i=min_module_series_okay
+            source_circuit=single_module_power*i
+            max_string=int(inverter['Pdco']/source_circuit)
+            ratio=max_string*single_module_power*i/inverter['Paco']
+            #diff_r=abs(dc_ac_ratio-ratio)
+            min_index_dc_ac_ratio = ratio
+            st.write(min_index_dc_ac_ratio)
+            max_parallel_string=max_string
+            no_of_series_module=min_module_series_okay      
+
 
 
 #st.write(source_circuit_STC_power)
