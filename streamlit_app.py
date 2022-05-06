@@ -193,8 +193,9 @@ T_add= 25 # temp adder
 min_module_vmp= module[index_mod]['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module[index_mod]['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
 min_module_series_ideal=math.ceil(inverter[index_inv]['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
 min_module_series_okay=math.ceil(inverter[index_inv]['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
+st.write('min_module_series_okay',min_module_series_okay)
 
-
+st.write('max_module_series',max_module_series)
 
 source_circuit_STC_power=[]
 parallel_string=[]
