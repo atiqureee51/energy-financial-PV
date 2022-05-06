@@ -187,21 +187,21 @@ min_db_temp_ashrae=-3.7     #ASHRAE_Extreme_Annual_Mean_Minimum_Design_Dry_Bulb 
 max_db_temp_ashrae= 36.6    #ASHRAE 2% Annual Design Dry Bulb Temperature (Tmax)#
 
 module['Bvoco%/C']=(module['Bvoco']/module['Voco'])*100
-module[index_mod]['Bvmpo%/C']=(module[index_mod]['Bvmpo']/module[index_mod]['Vmpo'])*100
-module[index_mod]['Aimpo%/C']=(module[index_mod]['Aimp']/module[index_mod]['Impo'])*100
-module[index_mod]['TPmpo%/C']=module[index_mod]['Bvmpo%/C']+module[index_mod]['Aimpo%/C']
-max_module_voc= module[index_mod]['Voco']*(1+((min_db_temp_ashrae-25)*module[index_mod]['Bvoco%/C']/100))  #Temperature corrected maximum module Voc
+module['Bvmpo%/C']=(module['Bvmpo']/module['Vmpo'])*100
+module['Aimpo%/C']=(module['Aimp']/module['Impo'])*100
+module['TPmpo%/C']=module['Bvmpo%/C']+module['Aimpo%/C']
+max_module_voc= module['Voco']*(1+((min_db_temp_ashrae-25)*module['Bvoco%/C']/100))  #Temperature corrected maximum module Voc
 max_module_series=int(max_string_design_voltage/max_module_voc) #maximum number of modules in series
 
 
 
-dc_ac_ratio=inverter[index_inv]['Pdco']/inverter[index_inv]['Paco']
-inverter_STC_watts=inverter[index_inv]['Paco']*dc_ac_ratio
-single_module_power=module[index_mod]['Vmpo']*module[index_mod]['Impo']
+dc_ac_ratio=inverter['Pdco']/inverter['Paco']
+inverter_STC_watts=inverter['Paco']*dc_ac_ratio
+single_module_power=module['Vmpo']*module['Impo']
 T_add= 25 # temp adder
-min_module_vmp= module[index_mod]['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module[index_mod]['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
-min_module_series_ideal=math.ceil(inverter[index_inv]['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
-min_module_series_okay=math.ceil(inverter[index_inv]['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
+min_module_vmp= module['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
+min_module_series_ideal=math.ceil(inverter['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
+min_module_series_okay=math.ceil(inverter['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
 st.write('min_module_series_okay',min_module_series_okay)
 
 st.write('max_module_series',max_module_series)
@@ -214,8 +214,8 @@ series_module=[]
 for i in range(min_module_series_okay,max_module_series+1,1):
   #st.write(i)
   source_circuit=single_module_power*i
-  max_string=int(inverter[index_inv]['Pdco']/source_circuit)
-  ratio=max_string*single_module_power*i/inverter[index_inv]['Paco']
+  max_string=int(inverter['Pdco']/source_circuit)
+  ratio=max_string*single_module_power*i/inverter['Paco']
   diff_r=abs(dc_ac_ratio-ratio)
   diff_ratio.append(diff_r)
   circuit_dc_ac_ratio.append(ratio)
@@ -242,12 +242,12 @@ st.write('no_of_series_module',no_of_series_module)
 
 # b. Calculate number of inverters needed to meet annual energy production goal
 
-number_of_inverters_needed=math.ceil(system_size*1E6/inverter[index_inv]['Pdco'])
+number_of_inverters_needed=math.ceil(system_size*1E6/inverter['Pdco'])
 st.write('number_of_inverters_needed:',number_of_inverters_needed)
 
 # 8. Calculate the total AC and DC system size, and DC/AC ratio
-total_AC_system_size=inverter[index_inv]['Paco']*number_of_inverters_needed
-total_DC_system_size=inverter[index_inv]['Pdco']*number_of_inverters_needed
+total_AC_system_size=inverter['Paco']*number_of_inverters_needed
+total_DC_system_size=inverter['Pdco']*number_of_inverters_needed
 dc_ac_ratio=total_DC_system_size/total_AC_system_size
 st.write('dc_ac_ratio:',dc_ac_ratio)
 
@@ -372,7 +372,7 @@ Capacity_Factor=((annual_energy_production.values)/(single_module_power*max_para
 st.write('Capacity Factor in %',Capacity_Factor*100)
 
 ## g. System Efficiency
-System_Efficiency=((annual_energy_production.values)/(poa_sum*max_parallel_string*no_of_series_module*number_of_inverters_needed*module[index_mod]['Area']))*1000
+System_Efficiency=((annual_energy_production.values)/(poa_sum*max_parallel_string*no_of_series_module*number_of_inverters_needed*module['Area']))*1000
 st.write('System_Efficiency in %',System_Efficiency*100)
 
 
