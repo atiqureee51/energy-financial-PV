@@ -124,7 +124,7 @@ salvage_cost=salvage_value
 total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'connections':0, 'lid':0, 'nameplate_rating':0, 'age':0, 'availability':0}
 
 #import st_aggrid
-from st_aggrid import AgGrid
+#from st_aggrid import AgGrid
 #st.write('losses values in percentage')
 #lossdataframe = pd.DataFrame({'soiling': [2], 'shading':[0], 'snow':[0], 'mismatch':[2], 'wiring':[2], 'connections':[0], 'lid':[0], 'nameplate_rating':[0], 'age':[0], 'availability':[0]})
 #grid_return = AgGrid(lossdataframe, editable=True)
