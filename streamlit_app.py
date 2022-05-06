@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri May  6 12:07:05 2022
+
+@author: Atiqur rahaman
+"""
+
 
 import pvlib
 from pvlib import location
@@ -84,7 +91,7 @@ voc=variable_operating_costs   ##$/kWh
 foc=annual_maintenance_costs
 salvage_cost=salvage_value
 
-#print('installed_cost=',installed_cost)
+#st.write('installed_cost=',installed_cost)
 
 total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'connections':0, 'lid':0, 'nameplate_rating':0, 'age':0, 'availability':0}
 mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
@@ -128,7 +135,7 @@ circuit_dc_ac_ratio=[]
 diff_ratio=[]
 series_module=[]
 for i in range(min_module_series_okay,max_module_series+1,1):
-  #print(i)
+  #st.write(i)
   source_circuit=single_module_power*i
   max_string=int(inverter['Pdco']/source_circuit)
   ratio=max_string*single_module_power*i/inverter['Paco']
@@ -139,19 +146,129 @@ for i in range(min_module_series_okay,max_module_series+1,1):
   source_circuit_STC_power.append(source_circuit)
   series_module.append(i)
 min_index_dc_ac_ratio = diff_ratio.index(min(diff_ratio))
-print(min_index_dc_ac_ratio)
+st.write(min_index_dc_ac_ratio)
 max_parallel_string=parallel_string[min_index_dc_ac_ratio]
 no_of_series_module=series_module[min_index_dc_ac_ratio]
 
 
-#print(source_circuit_STC_power)
-#print(parallel_string)
-#print(circuit_dc_ac_ratio)
-#print('max_parallel_string:',max_parallel_string)
-#print('no_of_series_module',no_of_series_module)
+#st.write(source_circuit_STC_power)
+#st.write(parallel_string)
+#st.write(circuit_dc_ac_ratio)
+#st.write('max_parallel_string:',max_parallel_string)
+#st.write('no_of_series_module',no_of_series_module)
 
 st.write('max_parallel_string:',max_parallel_string)
 st.write('no_of_series_module',no_of_series_module)
+
+
+
+
+# b. Calculate number of inverters needed to meet annual energy production goal
+
+number_of_inverters_needed=math.ceil(system_size*1E6/inverter['Pdco'])
+st.write('number_of_inverters_needed:',number_of_inverters_needed)
+
+# 8. Calculate the total AC and DC system size, and DC/AC ratio
+total_AC_system_size=inverter['Paco']*number_of_inverters_needed
+total_DC_system_size=inverter['Pdco']*number_of_inverters_needed
+dc_ac_ratio=total_DC_system_size/total_AC_system_size
+st.write('dc_ac_ratio:',dc_ac_ratio)
+
+
+
+##9. Enter the type of racking to be used (i.e. fixed tilt, single-axis tracking, etc.)
+#   a. Enter azimuth and tilt angle for array
+#   b. Enter Ground Coverage Ratio or distance between rows
+
+#a. Enter azimuth and tilt angle for array
+racking_parameters = {
+    'racking_type': 'fixed_tilt',
+    'surface_tilt': 30,
+    'surface_azimuth': 180,
+    'albedo':0.2,
+    'gcr': 0.60 
+}
+
+
+##10. Calculate the following performance information
+
+#a. Annual energy production
+
+#calculates the solar data (zenith,azimuth,eot,elevation,etc)
+sol_data = pvlib.solarposition.get_solarposition(time=weather.index,latitude=lat,longitude=lon,altitude=alt,temperature=weather['Temperature'])
+sol_data['dni_extra']=pvlib.irradiance.get_extra_radiation(weather.index)
+
+#we can confirm the tz is correctly localized by looking at the solar elevation values
+sol_data.head(5)
+#calculate environmental data (poa components, aoi, airmass)
+env_data = pvlib.irradiance.get_total_irradiance(surface_tilt=racking_parameters['surface_tilt'], surface_azimuth=racking_parameters['surface_azimuth'], 
+                                                 solar_zenith=sol_data['apparent_zenith'],
+                                                 solar_azimuth=sol_data['azimuth'], dni=weather['DNI'],ghi=weather['GHI'],
+                                                 dhi=weather['DHI'], dni_extra=sol_data['dni_extra'], model='haydavies')
+env_data['aoi'] = pvlib.irradiance.aoi(surface_tilt=racking_parameters['surface_tilt'], surface_azimuth=racking_parameters['surface_azimuth'], solar_zenith=sol_data['apparent_zenith'],
+                                       solar_azimuth=sol_data['azimuth'])
+env_data['airmass'] = pvlib.atmosphere.get_relative_airmass(zenith=sol_data['apparent_zenith'])
+env_data['am_abs'] = pvlib.atmosphere.get_absolute_airmass(airmass_relative=env_data['airmass'], pressure=(weather['Pressure']*100))
+env_data.head(5)
+#calculate the effective irradiance - needs module so that it can have fraction of diffuse irradiance used by the module
+weather['effective_irradiance'] = pvlib.pvsystem.sapm_effective_irradiance(poa_direct=env_data['poa_direct'],poa_diffuse=env_data['poa_diffuse'],
+                                                   airmass_absolute=env_data['am_abs'], aoi=env_data['aoi'], module=module)
+
+tmp=(pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer'])
+weather['cell_temperature'] = pvlib.temperature.sapm_cell(poa_global=env_data['poa_global'], temp_air=weather['Temperature'],
+                                                   wind_speed=weather['Wind Speed'], a=tmp['a'], b=tmp['b'], deltaT=tmp['deltaT'])
+
+
+weather['Solar Elevation'] = sol_data['apparent_elevation']
+weather.replace(0, np.nan, inplace=True)
+#weather.replace(np.nan,0, inplace=True)
+#day_weather = weather.loc[(weather['Solar Elevation'] > 0) & (weather['Solar Elevation'] < 90)] 
+
+
+
+temperature_model_parameters = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer']
+
+
+#https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.pvsystem.PVSystem.html#pvlib.pvsystem.PVSystem
+system=pvlib.pvsystem.PVSystem(arrays=None, surface_tilt=racking_parameters['surface_tilt'], surface_azimuth=racking_parameters['surface_azimuth'], 
+                        albedo=0.2, surface_type=None, module='SunPower_SPR_300_WHT__2007__E__', 
+                        module_type=None, module_parameters=module, 
+                        temperature_model_parameters=temperature_model_parameters, modules_per_string=no_of_series_module, 
+                        strings_per_inverter=max_parallel_string, inverter='Huawei_Technologies_Co___Ltd___SUN2000_33KTL_US__480V_', inverter_parameters=inverter, 
+                        racking_model='open_rack', losses_parameters=total_loss , name=None)
+
+
+
+#https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.modelchain.ModelChain.run_model_from_effective_irradiance.html#pvlib.modelchain.ModelChain.run_model_from_effective_irradiance
+mc = ModelChain(system, location,losses_model='pvwatts')
+#mc.run_model(weather)
+mc.run_model_from_effective_irradiance(weather)
+mc.results.aoi
+mc.results.cell_temperature
+mc.results.dc.to_dict()
+ac_result=mc.results.ac.to_dict()
+#ac_result.loc[ac_result<0]=0
+#ac_result.loc[ac_result<0]
+ac_result
+energy_production=(pd.DataFrame.from_dict(ac_result, orient='index', columns=['energy_production'])*number_of_inverters_needed)/1000  ##in kW
+energy_production.replace( np.nan, 0, inplace=True)
+energy_month=energy_production.resample('M').sum()*(3600/3600)   # kWh
+energy_month
+#annual_energy_production=energy_month.resample('Y').sum()*(1-final_loss/100)   # kWh
+annual_energy_production=energy_month.resample('Y').sum()  # MWh
+annual_energy_production
+st.write('annual_energy_production in kWh',annual_energy_production.to_numpy())
+
+
+
+
+
+
+
+
+
+
+
 
 st.subheader('Number of pickups by hour')
 hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
