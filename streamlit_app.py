@@ -137,7 +137,7 @@ total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'conne
 mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
 #mod.to_csv('/content/module.csv') 
 clist = mod.T
-country = st.sidebar.selectbox("Select a module:",clist)
+country = st.sidebar.selectbox("Select a module:",clist, index=1)
 st.write('list', clist)
 module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
 module=country
