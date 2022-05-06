@@ -145,15 +145,12 @@ st.write('module list', clist)
 select_module2=clist[clist['index'] == select_module]
 
 index_value=clist[clist['index'] == select_module].index.tolist()
-index_module = np.asarray(index_value)
-st.write('index',index_module)
-module=select_module2.T.to_dict()
-#index_value=clist.columns.get_loc(select_module2)
-#st.write('index',index_value)
+index_mod = np.asarray(index_value)
+st.write('index',index_mod)
 
+module=select_module2.T.to_dict()
 st.write('module',module)
-#index_value=select_module2.index
-#
+
 
 # 6. Select an inverter from the SAM database
 
@@ -166,29 +163,34 @@ select_inverter = st.sidebar.selectbox("Select a inverter:",clist)
 st.write('inverter list', clist)
 
 select_inverter2=clist[clist['index'] == select_inverter]
+index_value=clist[clist['index'] == select_inverter].index.tolist()
+index_inv = np.asarray(index_value)
+st.write('index',index_inv)
+
+
 inverter=select_inverter2.T.to_dict()
 st.write('inverter',inverter)
 
-max_string_design_voltage = inverter[0]['Vdcmax']
+max_string_design_voltage = inverter[index_inv]['Vdcmax']
 min_db_temp_ashrae=-3.7     #ASHRAE_Extreme_Annual_Mean_Minimum_Design_Dry_Bulb Temperature (Tmin)
 max_db_temp_ashrae= 36.6    #ASHRAE 2% Annual Design Dry Bulb Temperature (Tmax)#
 
-module[0]['Bvoco%/C']=(module[0]['Bvoco']/module[0]['Voco'])*100
-module[0]['Bvmpo%/C']=(module[0]['Bvmpo']/module[0]['Vmpo'])*100
-module[0]['Aimpo%/C']=(module[0]['Aimp']/module[0]['Impo'])*100
-module[0]['TPmpo%/C']=module[0]['Bvmpo%/C']+module[0]['Aimpo%/C']
-max_module_voc= module[0]['Voco']*(1+((min_db_temp_ashrae-25)*module[0]['Bvoco%/C']/100))  #Temperature corrected maximum module Voc
+module[index_mod]['Bvoco%/C']=(module[index_mod]['Bvoco']/module[index_mod]['Voco'])*100
+module[index_mod]['Bvmpo%/C']=(module[index_mod]['Bvmpo']/module[index_mod]['Vmpo'])*100
+module[index_mod]['Aimpo%/C']=(module[index_mod]['Aimp']/module[index_mod]['Impo'])*100
+module[index_mod]['TPmpo%/C']=module[index_mod]['Bvmpo%/C']+module[index_mod]['Aimpo%/C']
+max_module_voc= module[index_mod]['Voco']*(1+((min_db_temp_ashrae-25)*module[index_mod]['Bvoco%/C']/100))  #Temperature corrected maximum module Voc
 max_module_series=int(max_string_design_voltage/max_module_voc) #maximum number of modules in series
 
 
 
-dc_ac_ratio=inverter[0]['Pdco']/inverter[0]['Paco']
-inverter_STC_watts=inverter[0]['Paco']*dc_ac_ratio
-single_module_power=module[0]['Vmpo']*module[0]['Impo']
+dc_ac_ratio=inverter[index_inv]['Pdco']/inverter[index_inv]['Paco']
+inverter_STC_watts=inverter[index_inv]['Paco']*dc_ac_ratio
+single_module_power=module[index_mod]['Vmpo']*module[index_mod]['Impo']
 T_add= 25 # temp adder
-min_module_vmp= module[0]['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module[0]['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
-min_module_series_ideal=math.ceil(inverter[0]['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
-min_module_series_okay=math.ceil(inverter[0]['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
+min_module_vmp= module[index_mod]['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module[index_mod]['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
+min_module_series_ideal=math.ceil(inverter[index_inv]['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
+min_module_series_okay=math.ceil(inverter[index_inv]['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
 
 
 
@@ -200,8 +202,8 @@ series_module=[]
 for i in range(min_module_series_okay,max_module_series+1,1):
   #st.write(i)
   source_circuit=single_module_power*i
-  max_string=int(inverter[0]['Pdco']/source_circuit)
-  ratio=max_string*single_module_power*i/inverter[0]['Paco']
+  max_string=int(inverter[index_inv]['Pdco']/source_circuit)
+  ratio=max_string*single_module_power*i/inverter[index_inv]['Paco']
   diff_r=abs(dc_ac_ratio-ratio)
   diff_ratio.append(diff_r)
   circuit_dc_ac_ratio.append(ratio)
@@ -228,12 +230,12 @@ st.write('no_of_series_module',no_of_series_module)
 
 # b. Calculate number of inverters needed to meet annual energy production goal
 
-number_of_inverters_needed=math.ceil(system_size*1E6/inverter[0]['Pdco'])
+number_of_inverters_needed=math.ceil(system_size*1E6/inverter[index_inv]['Pdco'])
 st.write('number_of_inverters_needed:',number_of_inverters_needed)
 
 # 8. Calculate the total AC and DC system size, and DC/AC ratio
-total_AC_system_size=inverter[0]['Paco']*number_of_inverters_needed
-total_DC_system_size=inverter[0]['Pdco']*number_of_inverters_needed
+total_AC_system_size=inverter[index_inv]['Paco']*number_of_inverters_needed
+total_DC_system_size=inverter[index_inv]['Pdco']*number_of_inverters_needed
 dc_ac_ratio=total_DC_system_size/total_AC_system_size
 st.write('dc_ac_ratio:',dc_ac_ratio)
 
@@ -358,7 +360,7 @@ Capacity_Factor=((annual_energy_production.values)/(single_module_power*max_para
 st.write('Capacity Factor in %',Capacity_Factor*100)
 
 ## g. System Efficiency
-System_Efficiency=((annual_energy_production.values)/(poa_sum*max_parallel_string*no_of_series_module*number_of_inverters_needed*module[0]['Area']))*1000
+System_Efficiency=((annual_energy_production.values)/(poa_sum*max_parallel_string*no_of_series_module*number_of_inverters_needed*module[index_mod]['Area']))*1000
 st.write('System_Efficiency in %',System_Efficiency*100)
 
 
