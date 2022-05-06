@@ -1,8 +1,4 @@
-!pip install pvlib
-!pip install plantpredict
-!pip install vocmax
-!pip install numpy-financial
-!pip install voila
+
 
 
 import streamlit as st
