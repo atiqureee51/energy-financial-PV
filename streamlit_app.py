@@ -42,7 +42,7 @@ if st.checkbox('Show raw data'):
     st.write(data)
             
 lat = st.number_input('Insert the latitude')
-lat=29.99
+#lat=29.99
 #st.write('The current number is ', lat)
 lon= st.number_input('Insert the longitude')
 #st.write('The current number is ', lon)
@@ -57,7 +57,7 @@ email='atiqureee@gmail.com'
 #st.write('The email is', email)
 
 
-weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email=email, names='2010', interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
+weather, metadata=pvlib.iotools.get_psm3(lat==lat, lon, NREL_API_KEY, email=email, names='2010', interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
 
 ## 3. Enter the following financial information:
 installed_cost=4328468.17    #($/kWdc)
