@@ -47,11 +47,11 @@ lon= st.number_input('Insert the longitude')
 #st.write('The current number is ', lon)
 
 NREL_API_KEY = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
-NREL_API_KEY = st.text_input('NREL_API_KEY', 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3')
+#NREL_API_KEY = st.text_input('NREL_API_KEY', 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3')
 #st.write('The NREL_API_KEY is', NREL_API_KEY)
 
 email='atiqureee@gmail.com'
-email = st.text_input('email', 'atiqureee@gmail.com')
+#email = st.text_input('email', 'atiqureee@gmail.com')
 #st.write('The email is', email)
 
 
