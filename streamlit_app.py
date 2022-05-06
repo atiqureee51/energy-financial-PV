@@ -133,9 +133,9 @@ total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'conne
 
 #st.dataframe(new_df) 
 
-
+## mod selection
 mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
-#mod.to_csv('/content/module.csv') 
+
 module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
 clist = mod.T
 clist.reset_index(inplace=True)
@@ -149,28 +149,35 @@ st.write('module',module)
 #
 
 # 6. Select an inverter from the SAM database
-#invdb=pvlib.pvsystem.retrieve_sam('SandiaInverter')
-invdb=pvlib.pvsystem.retrieve_sam('SandiaInverter')
-#invdb.to_csv('/content/inverter.csv') 
-inverter=invdb.Huawei_Technologies_Co___Ltd___SUN2000_33KTL_US__480V_.to_dict()
 
+invdb=pvlib.pvsystem.retrieve_sam('SandiaInverter')
+ 
+inverter=invdb.Huawei_Technologies_Co___Ltd___SUN2000_33KTL_US__480V_.to_dict()
+clist = invdb.T
+clist.reset_index(inplace=True)
+select_inverter = st.sidebar.selectbox("Select a inverter:",clist)
+st.write('inverter list', clist)
+
+select_inverter2=clist[clist['index'] == select_inverter]
+inverter=select_inverter2.T.to_dict()
+st.write('inverter',inverter)
 
 max_string_design_voltage = inverter['Vdcmax']
 min_db_temp_ashrae=-3.7     #ASHRAE_Extreme_Annual_Mean_Minimum_Design_Dry_Bulb Temperature (Tmin)
 max_db_temp_ashrae= 36.6    #ASHRAE 2% Annual Design Dry Bulb Temperature (Tmax)#
 
-module[0]['Bvoco%/C']=(module['Bvoco']/module['Voco'])*100
-module['Bvmpo%/C']=(module['Bvmpo']/module['Vmpo'])*100
-module['Aimpo%/C']=(module['Aimp']/module['Impo'])*100
-module['TPmpo%/C']=module['Bvmpo%/C']+module['Aimpo%/C']
-max_module_voc= module['Voco']*(1+((min_db_temp_ashrae-25)*module['Bvoco%/C']/100))  #Temperature corrected maximum module Voc
+module[0]['Bvoco%/C']=(module[0]['Bvoco']/module[0]['Voco'])*100
+module[0]['Bvmpo%/C']=(module[0]['Bvmpo']/module[0]['Vmpo'])*100
+module[0]['Aimpo%/C']=(module[0]['Aimp']/module[0]['Impo'])*100
+module[0]['TPmpo%/C']=module[0]['Bvmpo%/C']+module[0]['Aimpo%/C']
+max_module_voc= module[0]['Voco']*(1+((min_db_temp_ashrae-25)*module[0]['Bvoco%/C']/100))  #Temperature corrected maximum module Voc
 max_module_series=int(max_string_design_voltage/max_module_voc) #maximum number of modules in series
 
 
 
-dc_ac_ratio=inverter['Pdco']/inverter['Paco']
-inverter_STC_watts=inverter['Paco']*dc_ac_ratio
-single_module_power=module['Vmpo']*module['Impo']
+dc_ac_ratio=inverter[0]['Pdco']/inverter[0]['Paco']
+inverter_STC_watts=inverter[0]['Paco']*dc_ac_ratio
+single_module_power=module[0]['Vmpo']*module[0]['Impo']
 T_add= 25 # temp adder
 min_module_vmp= module['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
 min_module_series_ideal=math.ceil(inverter['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
