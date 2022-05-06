@@ -341,7 +341,7 @@ st.write('System_Efficiency in %',System_Efficiency*100)
 
 Total_Capital_Cost=installed_cost-federal_tax_credit-state_tax_credit
 
-st.write('Total_Capital_Cost',Total_Capital_Cost)
+st.write('Total_Capital_Cost in $',Total_Capital_Cost)
 
 # c. Net annual savings
 
@@ -362,10 +362,10 @@ salvage_value=salvage_cost*single_pwf
 
 
 PV_Life_cycle_cost=Total_Capital_Cost+maintenance_value-salvage_value
-st.write('PV_Life_cycle_cost',PV_Life_cycle_cost)
+st.write('PV_Life_cycle_cost in $',PV_Life_cycle_cost)
 
 Net_LCC_cost=PV_Life_cycle_cost-Utility_energy_cost_LCC
-st.write('Net_LCC_cost',Net_LCC_cost)
+st.write('Net_LCC_cost in $',Net_LCC_cost)
 
 
 Net_annual_savings=energy_cost_first_year
@@ -380,7 +380,7 @@ st.write('LCOE in $/kWh',LCOE)
 ## d. Simple Payback Period
 
 Simple_Payback_Period=Total_Capital_Cost/(annual_energy_production.values*electricity_rate)
-st.write('Simple_Payback_Period',Simple_Payback_Period)
+st.write('Simple_Payback_Period in years',Simple_Payback_Period)
 
 
 #f. Net Present Value of Project
@@ -405,7 +405,7 @@ a =  npf.npv(discount_rate,[-Total_Capital_Cost, annual_energy_production.values
                            annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
                            annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
                            annual_energy_production.values*electricity_rate])
-st.write("Net Present Value(npv) : ", a)
+st.write("Net Present Value(npv) in $: ", a)
 
 
 
