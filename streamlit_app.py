@@ -26,18 +26,16 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from st_aggrid import AgGrid, DataReturnMode, GridUpdateMode, GridOptionsBuilder
+from distutils import errors
+from distutils.log import error
+import altair as alt
+from itertools import cycle
 
-@st.cache()
-def get_data():
-    df = pd.DataFrame(
-        np.random.randint(0, 100, 100).reshape(-1, 5), columns=list("abcde")
-    )
-    return df
+from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 
-df = get_data()
-AgGrid(df, key='grid1')
-AgGrid(df,  key='grid2')
+np.random.seed(42)
+
+@st.cache(allow_output_mutation=True)
 
 
 st.title('Technical and Financial Model of a PV system')
