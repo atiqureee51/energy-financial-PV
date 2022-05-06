@@ -1,4 +1,4 @@
 git+https://github.com/pvlib/pvlib-python
 git+https://github.com/plantpredict/python-sdk
 git+https://github.com/numpy/numpy-financial
-git+https://github.com/matplotlib/matplotlib
+matplotlib==3.4.1
