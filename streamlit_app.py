@@ -138,10 +138,10 @@ mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
 #mod.to_csv('/content/module.csv') 
 clist = mod.T
 clist.reset_index(inplace=True)
-country = st.sidebar.selectbox("Select a module:",clist, index=0)
+select_module = st.sidebar.selectbox("Select a module:",clist, index=0)
 st.write('list', clist)
 module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
-module=country
+module=select_module.T.to_dict()
 #
 
 # 6. Select an inverter from the SAM database
