@@ -141,7 +141,8 @@ clist.reset_index(inplace=True)
 select_module = st.sidebar.selectbox("Select a module:",clist, index=0)
 st.write('list', clist)
 module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
-module=select_module.T.to_dict()
+select_module2=(clist[clist['index'] == select_module],
+module=select_module2.T.to_dict()
 #
 
 # 6. Select an inverter from the SAM database
