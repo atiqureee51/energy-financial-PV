@@ -33,7 +33,6 @@ from itertools import cycle
 
 from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 
-!streamlit run example.py
 
 
 st.title('Technical and Financial Model of a PV system')
