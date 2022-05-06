@@ -386,7 +386,7 @@ st.write("Net Present Value(npv) : ", a)
 
 st.subheader('monthly production')
 hist_values1 = np.histogram(energy_month, bins=12, range=(0,12))
-st.bar_chart(energy_month)
+st.bar_chart(energy_month,width=4)
 
 
 
