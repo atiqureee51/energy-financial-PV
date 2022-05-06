@@ -31,7 +31,7 @@ from distutils.log import error
 import altair as alt
 from itertools import cycle
 
-from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
+#from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 
 
 
