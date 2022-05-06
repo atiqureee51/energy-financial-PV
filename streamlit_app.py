@@ -31,10 +31,10 @@ st.title('Technical and Financial Model of a PV system')
 
 @st.cache
 
-st.subheader('Raw data')
+#st.subheader('Raw data')
 ## 1. Enter the location of the PV system and obtain a weather file for that location
 
-st.subheader('Enter the location of the PV system and obtain a weather file for that location')
+#st.subheader('Enter the location of the PV system and obtain a weather file for that location')
 
 lat = st.number_input('Insert the latitude, example =29.99 ')
 #lat=29.99
