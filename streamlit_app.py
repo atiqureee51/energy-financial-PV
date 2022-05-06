@@ -33,9 +33,7 @@ from itertools import cycle
 
 from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 
-np.random.seed(42)
 
-@st.cache(allow_output_mutation=True)
 
 
 st.title('Technical and Financial Model of a PV system')
@@ -43,7 +41,8 @@ DATE_COLUMN = 'date/time'
 DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
             'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
 
-@st.cache
+
+@st.cache(allow_output_mutation=True)
 def load_data(nrows):
     data = pd.read_csv(DATA_URL, nrows=nrows)
     lowercase = lambda x: str(x).lower()
