@@ -26,7 +26,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from streamlit-aggrid.st_aggrid import AgGrid
+from st_aggrid import AgGrid
 
 
 st.title('Technical and Financial Model of a PV system')
