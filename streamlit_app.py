@@ -146,6 +146,7 @@ select_module2=clist[clist['index'] == select_module]
 
 index_value=clist[clist['index'] == select_module].index.tolist()
 index_mod = np.asarray(index_value)
+index_mod=index_mod[0]
 st.write('index',index_mod)
 
 module=select_module2.T.to_dict()
@@ -165,6 +166,7 @@ st.write('inverter list', clist)
 select_inverter2=clist[clist['index'] == select_inverter]
 index_value=clist[clist['index'] == select_inverter].index.tolist()
 index_inv = np.asarray(index_value)
+index_inv=index_inv[0]
 st.write('index',index_inv)
 
 
