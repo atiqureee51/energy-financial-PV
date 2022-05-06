@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-st.title('Uber pickups in NYC')
+st.title('Technical and Financial Model of a PV system')
 
 DATE_COLUMN = 'date/time'
 DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
@@ -23,6 +23,12 @@ data_load_state.text("Done! (using st.cache)")
 if st.checkbox('Show raw data'):
     st.subheader('Raw data')
     st.write(data)
+            
+lat = st.number_input('Insert the latitude')
+st.write('The current number is ', lat)
+lon= st.number_input('Insert the longitude')
+st.write('The current number is ', lon)
+
 
 st.subheader('Number of pickups by hour')
 hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
