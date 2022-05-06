@@ -84,14 +84,14 @@ salvage_cost=salvage_value
 
 total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'connections':0, 'lid':0, 'nameplate_rating':0, 'age':0, 'availability':0}
 mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
-mod.to_csv('/content/module.csv') 
+#mod.to_csv('/content/module.csv') 
 module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
 #
 
 # 6. Select an inverter from the SAM database
 #invdb=pvlib.pvsystem.retrieve_sam('SandiaInverter')
 invdb=pvlib.pvsystem.retrieve_sam('SandiaInverter')
-invdb.to_csv('/content/inverter.csv') 
+#invdb.to_csv('/content/inverter.csv') 
 inverter=invdb.Huawei_Technologies_Co___Ltd___SUN2000_33KTL_US__480V_.to_dict()
 
 
