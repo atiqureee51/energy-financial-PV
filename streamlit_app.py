@@ -272,6 +272,118 @@ st.write('annual_energy_production in kWh',annual_energy_production.to_numpy())
 
 
 
+##b. Energy Yield
+dc_result=mc.results.dc.p_mp.to_dict()
+energy_production_dc=(pd.DataFrame.from_dict(dc_result, orient='index', columns=['energy_production_dc'])*number_of_inverters_needed)/1000 ##in kW
+energy_production_dc.replace( np.nan, 0, inplace=True)
+annual_energy_production_dc=energy_production_dc.resample('Y').sum()*(3600/3600)
+Energy_Yield=((annual_energy_production_dc.values)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed))*1000
+st.write('Energy_Yield in kWh/m2:',Energy_Yield)
+
+## c. Final Yield
+Final_Yield=((annual_energy_production.values)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed))*1000
+st.write('Final_Yield in kWh/m2:',Final_Yield)
+
+
+## d. Reference Yield
+poa_wh_m2=(env_data['poa_global']*(3600/3600))  ##wh/m2
+poa_sum=poa_wh_m2.resample('Y').sum().to_numpy()
+Reference_Yield=poa_sum/1000 ##kwh/m2
+st.write('Reference_Yield kWh/m2',Reference_Yield)
+st.write('poa sum kWh/m2',poa_sum)
+
+## e. Performance Ratio
+Performance_Ratio=Final_Yield/Reference_Yield
+st.write('Performance_Ratio in %',Performance_Ratio*100)
+
+
+##f. Capacity Factor
+Capacity_Factor=((annual_energy_production.values)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed*8760))*1000
+st.write('Capacity Factor in %',Capacity_Factor*100)
+
+## g. System Efficiency
+System_Efficiency=((annual_energy_production.values)/(poa_sum*max_parallel_string*no_of_series_module*number_of_inverters_needed*module['Area']))*1000
+st.write('System_Efficiency in %',System_Efficiency*100)
+
+
+##11. Calculate the following financial information
+## a. Estimated installed cost (before credits and rebates)
+
+
+st.write('installed_cost',installed_cost)
+# b. Total Capital Cost
+
+Total_Capital_Cost=installed_cost-federal_tax_credit-state_tax_credit
+
+st.write('Total_Capital_Cost',Total_Capital_Cost)
+
+# c. Net annual savings
+
+
+
+
+energy_cost_first_year=annual_energy_production.values*electricity_rate
+RPWF=(1-((1+discount_rate)**(-year)))/discount_rate
+single_pwf=(1/((1+discount_rate)**year))
+Utility_energy_cost_LCC=energy_cost_first_year*RPWF
+
+st.write('Utility_energy_cost_LCC in $',Utility_energy_cost_LCC)
+
+maintenance_value=annual_maintenance_costs*RPWF
+st.write('maintenance_costs_value',maintenance_value)
+salvage_value=salvage_cost*single_pwf
+st.write('salvage_value',salvage_value)
+
+
+PV_Life_cycle_cost=Total_Capital_Cost+maintenance_value-salvage_value
+st.write('PV_Life_cycle_cost',PV_Life_cycle_cost)
+
+Net_LCC_cost=PV_Life_cycle_cost-Utility_energy_cost_LCC
+st.write('Net_LCC_cost',Net_LCC_cost)
+
+
+Net_annual_savings=energy_cost_first_year
+st.write('Net_annual_savings in $',Net_annual_savings)
+
+##e. LCOE
+fixed_charge_rate=1/RPWF
+
+
+LCOE=(((Total_Capital_Cost*fixed_charge_rate)+foc)/annual_energy_production.values)+voc
+st.write('LCOE in $/kWh',LCOE)
+## d. Simple Payback Period
+
+Simple_Payback_Period=Total_Capital_Cost/(annual_energy_production.values*electricity_rate)
+st.write('Simple_Payback_Period',Simple_Payback_Period)
+
+
+#f. Net Present Value of Project
+Net_Present_Value_of_Project=Total_Capital_Cost*single_pwf
+st.write('Net_Present_Value_of_Project',Net_Present_Value_of_Project)
+
+## Python program explaining pv() function
+import numpy_financial as npf
+
+#            rate            values     
+a =  npf.npv(discount_rate,[-Total_Capital_Cost, annual_energy_production.values*electricity_rate,
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate, 
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate, 
+                           annual_energy_production.values*electricity_rate, 
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate, 
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate, 
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
+                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
+                           annual_energy_production.values*electricity_rate])
+st.write("Net Present Value(npv) : ", a)
+
+
+
+
 
 
 
