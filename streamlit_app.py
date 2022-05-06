@@ -26,6 +26,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+import st_aggrid
 from st_aggrid import AgGrid
 
 
