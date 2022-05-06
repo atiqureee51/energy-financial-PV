@@ -3,9 +3,9 @@ import pvlib
 from pvlib import location
 from pvlib import irradiance
 import pandas as pd
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 import math
-import vocmax
+#import vocmax
 import time
 import numpy as np
 
