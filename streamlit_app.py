@@ -84,11 +84,15 @@ if st.checkbox('Show raw data'):
 
 
 ## 3. Enter the following financial information:
-installed_cost=4328468.17    #($/kWdc)
-federal_tax_credit=0.00*installed_cost  #(% of installed cost) 30
-state_tax_credit=0.00*installed_cost   #(% of installed cost) 10
-rebates= 0.26          #(itc OR Investment tax credit % of installed cost)
-interest_rate=0.04       #(annual percentage rate)
+installed_cost=st.number_input('Insert the installed_cost in $ ',value=4328468.17 )  
+federal_tax_credit_percent=st.number_input('Insert the federal_tax_credit in % ',value=0 )
+federal_tax_credit=federal_tax_credit_percent/100*installed_cost  #(% of installed cost) 30
+state_tax_credit_percent=st.number_input('Insert the state_tax_credit in % ',value=0 )
+state_tax_credit=state_tax_credit_percent/100*installed_cost   #(% of installed cost) 10
+rebates_percent=st.number_input('Insert rebate in % ',value=0 )
+rebates= rebates_percent/100          #(itc OR Investment tax credit % of installed cost)
+
+interest_rate=st.number_input('Insert the interest in % ',value=4 )/100       #(annual percentage rate)
 project_life=25       #(years)
 annual_maintenance_costs= 15000         #($)
 years_to_inverter_replacement=10   #(years)
