@@ -228,7 +228,7 @@ if max_module_series>=min_module_series_okay:
             st.write(min_index_dc_ac_ratio)
             max_parallel_string=parallel_string[min_index_dc_ac_ratio]
             no_of_series_module=series_module[min_index_dc_ac_ratio]
-elif:
+else:
             i=min_module_series_okay
             source_circuit=single_module_power*i
             max_string=int(inverter['Pdco']/source_circuit)
