@@ -141,7 +141,7 @@ mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
 module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
 clist = mod.T
 clist.reset_index(inplace=True)
-select_module = st.sidebar.selectbox("Select a module:",clist)
+select_module = st.sidebar.selectbox("Select a module:",clist, index=467)
 st.write('module list', clist)
 
 select_module2=clist[clist['index'] == select_module]
@@ -165,7 +165,7 @@ invdb=pvlib.pvsystem.retrieve_sam('SandiaInverter')
 inverter=invdb.Huawei_Technologies_Co___Ltd___SUN2000_33KTL_US__480V_.to_dict()
 clist = invdb.T
 clist.reset_index(inplace=True)
-select_inverter = st.sidebar.selectbox("Select a inverter:",clist)
+select_inverter = st.sidebar.selectbox("Select a inverter:",clist, index=1337)
 st.write('inverter list', clist)
 
 select_inverter2=clist[clist['index'] == select_inverter]
