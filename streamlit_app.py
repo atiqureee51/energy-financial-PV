@@ -72,7 +72,7 @@ lon=st.sidebar.number_input('Insert the longitude, example = -91.89',value=-91.8
 #st.write('The current number is ', lon)
 #lon=-91.89
 
-alt=st.number_input('Insert the altitude, example =13 ',value=13)
+alt=st.sidebar.number_input('Insert the altitude, example =13 ',value=13)
 ## 2. Enter the approximate desired annual energy production (kWh/year)
 system_size= 5 # in MW in dc
 
