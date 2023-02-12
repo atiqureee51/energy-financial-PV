@@ -82,12 +82,12 @@ system_size= 5 # in MW in dc
 
 #NREL_API_KEY2 = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
 NREL_API_KEY='qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK'  
-NREL_API_KEY = st.sidebar.text_input('NREL_API_KEY', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
+NREL_API_KEY = st.sidebar.text_input('Go to https://developer.nrel.gov/signup/ to get the NREL_API_KEY', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
 #st.write('The NREL_API_KEY is', NREL_API_KEY)
 
 email1='atiqureee@gmail.com'
 #email='atiqureee111@gmail.com'
-email = st.sidebar.text_input('email', 'atiqureee@gmail.com')
+email = st.sidebar.text_input('email for the NREL API KEY', 'atiqureee@gmail.com')
 #st.write('The email is', email)
 
 
