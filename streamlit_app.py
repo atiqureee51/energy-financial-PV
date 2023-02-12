@@ -134,7 +134,20 @@ df_map = pd.DataFrame({'lat': [lat],'lon': [lon]})
 st.map(df_map)
 
 
+df = pd.DataFrame({'ghi': weather["GHI"]}, index=time_index)
+df["year"] = weather["Year]
+df["month"] = weather["Month"]
+df["day"] = weather["Day"]
+df["hour"] = weather["Hour"]
 
+agg = df.groupby(["month","hour"]).mean()
+agg = agg.reset_index().pivot(index="month",columns="hour",values="ghi")
+plt.imshow(agg)
+plt.xlabel("Hour")
+plt.ylabel("Month")
+plt.title("12 x 24 Mean GHI (W/m^2)")
+plt.colorbar()
+st.chart(agg)
 
 
 
