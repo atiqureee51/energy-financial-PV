@@ -84,6 +84,12 @@ alt=st.sidebar.number_input('Insert the altitude, example =13 ',value=13)
 ## 2. Enter the approximate desired annual energy production (kWh/year)
 system_size= 5 # in MW in dc
 
+df_map = pd.DataFrame({'lat': [lat],'lon': [lon]})
+#df_map["lat"]=lat
+#df_map["lon"]=lon
+
+st.map(df_map, zoom=11)
+
 
 email1='atiqureee@gmail.com'
 #email='atiqureee111@gmail.com'
@@ -320,11 +326,7 @@ from copy import deepcopy
 from plotly.subplots import make_subplots
 
 
-df_map = pd.DataFrame({'lat': [lat],'lon': [lon]})
-#df_map["lat"]=lat
-#df_map["lon"]=lon
 
-st.map(df_map, zoom=12)
 
 
 
