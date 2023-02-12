@@ -41,7 +41,7 @@ DATE_COLUMN = 'date/time'
 DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
             'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
 
-@st.cache(allow_output_mutation=True)
+#@st.cache(allow_output_mutation=True)
 
 
 def load_data(nrows):
@@ -63,7 +63,7 @@ data = load_data(10000)
 #st.subheader('Raw data')
 ## 1. Enter the location of the PV system and obtain a weather file for that location
 
-st.subheader('Enter the location of the PV system and obtain a weather file for that location')
+st.subheader('Enter the location of the PV system and obtain techno-economic analysis for that location')
 
 lat = st.number_input('Insert the latitude, example =29.99 ',value=29.99,)
 #lat=29.99
@@ -77,12 +77,15 @@ alt=st.number_input('Insert the altitude, example =13 ',value=13)
 system_size= 5 # in MW in dc
 
 
-NREL_API_KEY2 = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
-NREL_API_KEY='lOHyZqGMvZfGXResGGPtdvceWLyUnCtabZ1Ngbkt'
-NREL_API_KEY = st.text_input('NREL_API_KEY', 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3')
+
+
+
+#NREL_API_KEY2 = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
+NREL_API_KEY='qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK'  
+NREL_API_KEY = st.text_input('NREL_API_KEY', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
 #st.write('The NREL_API_KEY is', NREL_API_KEY)
 
-email1='atiqureee@gmail.com'
+#email1='atiqureee@gmail.com'
 email='atiqureee111@gmail.com'
 email = st.text_input('email', 'atiqureee@gmail.com')
 #st.write('The email is', email)
@@ -93,7 +96,18 @@ weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names='2
 if st.checkbox('Show raw weather data'):
     st.subheader('Raw downloaded weather data')
     st.write(weather)
+# Setting up columns
 
+c1,c2= st.columns([1,1])
+
+# Widgets: checkbox (you can replace st.xx with st.sidebar.xx)
+if c2.checkbox("Show Dataframe"):
+    st.subheader("The weather dataset:")
+    st.dataframe(data=weather)
+    #st.table(data=weather)
+
+
+c1.download_button("Download CSV File", data=weather, file_name="weather.csv", mime='text/csv')
 
 ## 3. Enter the following financial information:
 installed_cost=st.number_input('Insert the installed_cost in $ ',value=4328468.17 )  
