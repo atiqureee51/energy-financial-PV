@@ -112,7 +112,7 @@ if st.checkbox('Show raw weather data'):
 ##chart
 #chart_data = 
 
-st.line_chart(weather["GHI"])
+st.line_chart(weather["GHI", "Temperature"])
 
 ##map
 import numpy as np
