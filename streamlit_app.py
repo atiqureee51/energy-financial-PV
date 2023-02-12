@@ -135,7 +135,7 @@ st.map(df_map)
 
 
 df = pd.DataFrame({'ghi': weather["GHI"]}, index=time_index)
-df["year"] = weather["Year]
+df["year"] = weather["Year"]
 df["month"] = weather["Month"]
 df["day"] = weather["Day"]
 df["hour"] = weather["Hour"]
