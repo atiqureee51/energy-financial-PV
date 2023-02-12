@@ -91,7 +91,7 @@ NREL_API_KEY = st.sidebar.text_input('Go to https://developer.nrel.gov/signup/ t
 
 
 
-weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names='2010', interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
+weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names="tmy-2019", interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
 
 if st.checkbox('Show raw weather data'):
     st.subheader('Raw downloaded weather data')
