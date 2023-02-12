@@ -112,7 +112,8 @@ if st.checkbox('Show raw weather data'):
 ##chart
 chart_data = pd.DataFrame(weather["GHI"],weather["Temperature"],weather["Wind Speed"])
 
-st.line_chart(chart_data)
+#st.line_chart(chart_data)
+st.line_chart(weather["GHI"])
 
 ##map
 import numpy as np
