@@ -37,8 +37,13 @@ from itertools import cycle
 #from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 
 
-
-st.title('Technical and Financial Model of a PV system')
+# Add social media tags and links to the web page.
+"""
+# Technical and Financial Model of a PV system
+"""
+# Add a sidebar to the web page. 
+st.markdown('---')
+#st.title('Technical and Financial Model of a PV system')
 
 DATE_COLUMN = 'date/time'
 DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
