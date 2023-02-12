@@ -96,7 +96,7 @@ PSM5MIN_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-5min-download.csv"
 
 if lon>-16 and lon<91:
             PSM_URL=NSRDB_API_BASE + "/api/nsrdb/v2/solar/msg-iodc-download.csv"
-elif on>91 and lon<182:
+elif lon>91 and lon<182:
             PSM_URL=NSRDB_API_BASE + "/api/nsrdb/v2/solar/himawari-download.csv"
 else:
             PSM_URL=PSM_URL
