@@ -85,8 +85,8 @@ NREL_API_KEY='qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK'
 NREL_API_KEY = st.text_input('NREL_API_KEY', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
 #st.write('The NREL_API_KEY is', NREL_API_KEY)
 
-#email1='atiqureee@gmail.com'
-email='atiqureee111@gmail.com'
+email1='atiqureee@gmail.com'
+#email='atiqureee111@gmail.com'
 email = st.text_input('email', 'atiqureee@gmail.com')
 #st.write('The email is', email)
 
@@ -107,7 +107,7 @@ if c2.checkbox("Show Dataframe"):
     #st.table(data=weather)
 
 
-c1.download_button("Download CSV File", data=weather, file_name="weather.csv", mime='text/csv')
+c1.download_button("Download CSV File", data=weather.csv, file_name="weather.csv", mime='text/csv')
 
 ## 3. Enter the following financial information:
 installed_cost=st.number_input('Insert the installed_cost in $ ',value=4328468.17 )  
