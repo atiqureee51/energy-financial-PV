@@ -147,7 +147,7 @@ plt.xlabel("Hour")
 plt.ylabel("Month")
 plt.title("12 x 24 Mean GHI (W/m^2)")
 plt.colorbar()
-st.plotly_chart(agg)
+st.pyplot(agg)
 
 
 
