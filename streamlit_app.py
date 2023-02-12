@@ -121,20 +121,7 @@ from urllib.request import urlopen
 import json
 from copy import deepcopy
 from plotly.subplots import make_subplots
-color = cm.inferno_r(np.linspace(.3, .7, 64))
 
-# Geographic Map 3
-fig3 = go.Figure(
-    px.choropleth_mapbox(weather,
-            title='location of the selected site',
-            mapbox_style='carto-positron',
-            center= { 'lat' : lat, 'lon' : lon},
-            zoom=4.8,
-            opacity=0.6)
-)
-#fig3.update_geos( visible=False)
-fig3.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-st.plotly_chart(fig3)
 
 df_map = pd.DataFrame({'lat': [lat],'lon': [lon]})
 #df_map["lat"]=lat
