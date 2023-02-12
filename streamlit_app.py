@@ -91,7 +91,48 @@ NREL_API_KEY = st.sidebar.text_input('Go to https://developer.nrel.gov/signup/ t
 
 
 
-weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
+#weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
+
+### new way https://developer.nrel.gov/docs/solar/nsrdb/python-examples/
+
+# Declare all variables as strings. Spaces must be replaced with '+', i.e., change 'John Smith' to 'John+Smith'.
+# Define the lat, long of the location and the year
+# You must request an NSRDB api key from the link above
+api_key = NREL_API_KEY
+# Set the attributes to extract (e.g., dhi, ghi, etc.), separated by commas.
+attributes = 'ghi,dhi,dni,wind_speed,air_temperature,solar_zenith_angle'
+# Choose year of data
+year = '2019'
+# Set leap year to true or false. True will return leap day data if present, false will not.
+leap_year = 'false'
+# Set time interval in minutes, i.e., '30' is half hour intervals. Valid intervals are 30 & 60.
+interval = '30'
+# Specify Coordinated Universal Time (UTC), 'true' will use UTC, 'false' will use the local time zone of the data.
+# NOTE: In order to use the NSRDB data in SAM, you must specify UTC as 'false'. SAM requires the data to be in the
+# local time zone.
+utc = 'false'
+# Your full name, use '+' instead of spaces.
+your_name = 'John+Smith'
+# Your reason for using the NSRDB.
+reason_for_use = 'beta+testing'
+# Your affiliation
+your_affiliation = 'my+institution'
+# Your email address
+your_email = 'email'
+# Please join our mailing list so we can keep you up-to-date on new developments.
+mailing_list = 'true'
+
+# Return all but first 2 lines of csv to get data:
+weather = pd.read_csv('https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-download.csv?wkt=POINT({lon}%20{lat})&names={year}&leap_day={leap}&interval={interval}&utc={utc}&full_name={name}&email={email}&affiliation={affiliation}&mailing_list={mailing_list}&reason={reason}&api_key={api}&attributes={attr}'.format(year=year, lat=lat, lon=lon, leap=leap_year, interval=interval, utc=utc, name=your_name, email=your_email, mailing_list=mailing_list, affiliation=your_affiliation, reason=reason_for_use, api=api_key, attr=attributes), skiprows=2)
+
+# Set the time index in the pandas dataframe:
+weather = df.set_index(pd.date_range('1/1/{yr}'.format(yr=year), freq=interval+'Min', periods=525600/int(interval)))
+
+
+
+
+
+
 
 if st.checkbox('Show raw weather data'):
     st.subheader('Raw downloaded weather data')
