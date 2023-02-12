@@ -4,6 +4,9 @@ Created on Fri May  6 12:07:05 2022
 
 @author: Atiqur rahaman
 """
+#https://nsrdb.nrel.gov/data-viewer
+#https://pvlib-python.readthedocs.io/en/stable/_modules/pvlib/iotools/psm3.html#get_psm3
+#https://developer.nrel.gov/docs/solar/nsrdb/psm3-tmy-download/
 
 
 import pvlib
