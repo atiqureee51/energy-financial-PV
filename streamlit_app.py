@@ -140,7 +140,7 @@ df_map = pd.DataFrame()
 df_map["lat"]=lat
 df_map["lon"]=lon
 
-st.map(df_map)
+st.map(df_map,zoom=True, use_container_width=True)
 
 
 
