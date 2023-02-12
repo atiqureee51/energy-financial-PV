@@ -65,10 +65,10 @@ data = load_data(10000)
 
 st.subheader('Enter the location of the PV system and obtain techno-economic analysis for that location')
 
-lat = st.number_input('Insert the latitude, example =29.99 ',value=29.99,)
+lat = st.sidebar.number_input('Insert the latitude, example =29.99 ',value=29.99,)
 #lat=29.99
 #st.write('The current number is ', lat)
-lon= st.number_input('Insert the longitude, example = -91.89',value=-91.89)
+lon=st.sidebar.number_input('Insert the longitude, example = -91.89',value=-91.89)
 #st.write('The current number is ', lon)
 #lon=-91.89
 
@@ -77,7 +77,10 @@ alt=st.number_input('Insert the altitude, example =13 ',value=13)
 system_size= 5 # in MW in dc
 
 
-
+email1='atiqureee@gmail.com'
+#email='atiqureee111@gmail.com'
+email = st.sidebar.text_input('email for the NREL API KEY', 'atiqureee@gmail.com')
+#st.write('The email is', email)
 
 
 #NREL_API_KEY2 = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
@@ -85,10 +88,7 @@ NREL_API_KEY='qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK'
 NREL_API_KEY = st.sidebar.text_input('Go to https://developer.nrel.gov/signup/ to get the NREL_API_KEY', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
 #st.write('The NREL_API_KEY is', NREL_API_KEY)
 
-email1='atiqureee@gmail.com'
-#email='atiqureee111@gmail.com'
-email = st.sidebar.text_input('email for the NREL API KEY', 'atiqureee@gmail.com')
-#st.write('The email is', email)
+
 
 
 weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names='2010', interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
