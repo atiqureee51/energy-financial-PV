@@ -136,11 +136,11 @@ fig3 = go.Figure(
 fig3.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
 st.plotly_chart(fig3)
 
-df_map = pd.DataFrame()
-df_map["lat"]=lat
-df_map["lon"]=lon
+df_map = pd.DataFrame({'lat': [lat],'lon': [lon]})
+#df_map["lat"]=lat
+#df_map["lon"]=lon
 
-st.map(df_map,zoom=12, use_container_width=True)
+st.map(df_map)
 
 
 
