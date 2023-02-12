@@ -89,8 +89,18 @@ NREL_API_KEY = st.sidebar.text_input('Go to https://developer.nrel.gov/signup/ t
 #st.write('The NREL_API_KEY is', NREL_API_KEY)
 
 
+NSRDB_API_BASE = "https://developer.nrel.gov"
+PSM_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-download.csv"
+TMY_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-tmy-download.csv"
+PSM5MIN_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-5min-download.csv"
 
-
+if lon>-16 and lon<91:
+            PSM_URL=NSRDB_API_BASE + "/api/nsrdb/v2/solar/msg-iodc-download.csv"
+elif on>91 and lon<182:
+            PSM_URL=NSRDB_API_BASE + "/api/nsrdb/v2/solar/himawari-download.csv"
+else:
+            PSM_URL=PSM_URL
+#url = "http://developer.nrel.gov/api/nsrdb/v2/solar/msg-iodc-download.json?api_key=yourapikeygoeshere"
 weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=60)
 
 
