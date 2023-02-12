@@ -109,7 +109,10 @@ if st.checkbox('Show raw weather data'):
 #weather.to_csv('/data/weather.csv')
 #c1.download_button("Download CSV File", data='/data/weather.csv', file_name="weather.csv", mime='text/csv')
 
+##chart
+#chart_data = 
 
+st.line_chart(weather["GHI"])
 
 ##map
 import numpy as np
