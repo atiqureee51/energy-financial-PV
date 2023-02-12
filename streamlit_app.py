@@ -100,13 +100,13 @@ NREL_API_KEY = st.sidebar.text_input('Go to https://developer.nrel.gov/signup/ t
 # You must request an NSRDB api key from the link above
 api_key = NREL_API_KEY
 # Set the attributes to extract (e.g., dhi, ghi, etc.), separated by commas.
-attributes = 'ghi,dhi,dni,wind_speed,air_temperature,solar_zenith_angle'
+attributes = 'ghi,dhi,dni,wind_speed,air_temperature,solar_zenith_angle,relative_humidity,wind_direction'
 # Choose year of data
 year = '2019'
 # Set leap year to true or false. True will return leap day data if present, false will not.
 leap_year = 'false'
 # Set time interval in minutes, i.e., '30' is half hour intervals. Valid intervals are 30 & 60.
-interval = '30'
+interval = '60'
 # Specify Coordinated Universal Time (UTC), 'true' will use UTC, 'false' will use the local time zone of the data.
 # NOTE: In order to use the NSRDB data in SAM, you must specify UTC as 'false'. SAM requires the data to be in the
 # local time zone.
