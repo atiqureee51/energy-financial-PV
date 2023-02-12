@@ -88,6 +88,7 @@ df_map = pd.DataFrame({'lat': [lat],'lon': [lon]})
 #df_map["lat"]=lat
 #df_map["lon"]=lon
 
+st.write('Location: ')
 st.map(df_map, zoom=11)
 
 
