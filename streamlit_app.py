@@ -65,10 +65,10 @@ data = load_data(10000)
 
 st.subheader('Enter the location of the PV system and obtain techno-economic analysis for that location')
 
-lat = st.sidebar.number_input('Insert the latitude, example =29.99 ',value=29.99,)
+lat = st.sidebar.number_input('Insert the latitude, example =30.2671 ',value=30.2671,)
 #lat=29.99
 #st.write('The current number is ', lat)
-lon=st.sidebar.number_input('Insert the longitude, example = -91.89',value=-91.89)
+lon=st.sidebar.number_input('Insert the longitude, example = -92.0981',value=-92.0981)
 #st.write('The current number is ', lon)
 #lon=-91.89
 
@@ -91,7 +91,7 @@ NREL_API_KEY = st.sidebar.text_input('Go to https://developer.nrel.gov/signup/ t
 
 
 
-weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=30)
+weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=60)
 
 
 
