@@ -110,9 +110,9 @@ if st.checkbox('Show raw weather data'):
 #c1.download_button("Download CSV File", data='/data/weather.csv', file_name="weather.csv", mime='text/csv')
 
 ##chart
-#chart_data = 
+chart_data = pd.DataFrame(weather["GHI"],weather["Temperature"],weather["Wind Speed"])
 
-st.line_chart(weather["GHI"],weather["Temperature"])
+st.line_chart(weather["GHI"])
 
 ##map
 import numpy as np
