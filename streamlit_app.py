@@ -106,8 +106,8 @@ if c2.checkbox("Show Dataframe"):
     st.dataframe(data=weather)
     #st.table(data=weather)
 
-
-c1.download_button("Download CSV File", data=weather.csv, file_name="weather.csv", mime='text/csv')
+weather.to_csv('/data/weather.csv')
+c1.download_button("Download CSV File", data='/data/weather.csv', file_name="weather.csv", mime='text/csv')
 
 ## 3. Enter the following financial information:
 installed_cost=st.number_input('Insert the installed_cost in $ ',value=4328468.17 )  
