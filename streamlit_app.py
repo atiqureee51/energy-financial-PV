@@ -98,16 +98,50 @@ if st.checkbox('Show raw weather data'):
     st.write(weather)
 # Setting up columns
 
-c1,c2= st.columns([1,1])
+#c1,c2= st.columns([1,1])
 
 # Widgets: checkbox (you can replace st.xx with st.sidebar.xx)
-if c2.checkbox("Show Dataframe"):
-    st.subheader("The weather dataset:")
-    st.dataframe(data=weather)
+#if c2.checkbox("Show Dataframe"):
+#    st.subheader("The weather dataset:")
+#    st.dataframe(data=weather)
     #st.table(data=weather)
 
-weather.to_csv('/data/weather.csv')
-c1.download_button("Download CSV File", data='/data/weather.csv', file_name="weather.csv", mime='text/csv')
+#weather.to_csv('/data/weather.csv')
+#c1.download_button("Download CSV File", data='/data/weather.csv', file_name="weather.csv", mime='text/csv')
+
+
+
+##map
+import numpy as np
+from matplotlib import cm
+import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
+from urllib.request import urlopen
+import json
+from copy import deepcopy
+from plotly.subplots import make_subplots
+color = cm.inferno_r(np.linspace(.3, .7, 64))
+
+# Geographic Map 3
+fig3 = go.Figure(
+    px.choropleth_mapbox(
+            title='location of the selected site',
+            mapbox_style='carto-positron',
+            center= { 'lat' : lat, 'lon' : lon},
+            zoom=4.8,
+            opacity=0.6)
+)
+fig3.update_geos( visible=False)
+fig3.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+st.plotly_chart(fig3)
+
+
+
+
+
+
+
 
 ## 3. Enter the following financial information:
 installed_cost=st.number_input('Insert the installed_cost in $ ',value=4328468.17 )  
