@@ -65,10 +65,10 @@ data = load_data(10000)
 
 st.subheader('Enter the location of the PV system and obtain techno-economic analysis for that location')
 
-lat = st.sidebar.number_input('Insert the latitude, example =30.2671 ',value=30.2671)
+lat = st.sidebar.number_input('Insert the latitude, example =30.2671 ',value=30.2671,format="%.4f")
 #lat=29.99
 #st.write('The current number is ', lat)
-lon=st.sidebar.number_input('Insert the longitude, example = -92.0981',value=-92.0981)
+lon=st.sidebar.number_input('Insert the longitude, example = -92.0981',value=-92.0981,format="%.4f")
 #st.write('The current number is ', lon)
 #lon=-91.89
 
