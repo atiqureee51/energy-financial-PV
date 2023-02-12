@@ -590,7 +590,7 @@ energy_month
 #annual_energy_production=energy_month.resample('Y').sum()*(1-final_loss/100)   # kWh
 annual_energy_production=energy_month.resample('Y').sum()  # MWh
 annual_energy_production
-st.write('annual_energy_production in kWh',annual_energy_production.values)
+st.write('annual_energy_production in kWh',annual_energy_production.to_numpy())
 
 
 
