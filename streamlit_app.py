@@ -336,12 +336,20 @@ st.markdown("## PV System Analysis")
 st.markdown("Use the sidebar to configure your parameters. If using Area-based sizing, draw a polygon on the map below.")
 
 st.markdown("#### Map: Select Location & Draw Area")
-m = folium.Map(location=[lat, lon], zoom_start=10)
-#folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
+## map
+token = "pk.eyJ1IjoiYXRpcXVyZWVlIiwiYSI6ImNrN2M1ZWNhNzFiNGYzZm51cTNod3FyeTIifQ.BdmhXY-jrpFPIgQxIE1BSQ" # your mapbox token
+tileurl = 'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.png?access_token=' + str(token)
+
+m = folium.Map(location=[lat, lon], tiles="Cartodb Positron", zoom_start=10)
+folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
+folium.TileLayer(location=[lat, lon], tiles="Cartodb Positron", zoom_start=5).add_to(m)
+folium.TileLayer(location=[lat, lon], tiles="Cartodb dark_matter", zoom_start=10).add_to(m)
+#folium.TileLayer(location= [lat, lon], zoom_start=9, tiles=tileurl, attr='Mapbox').add_to(m)
+folium.TileLayer('openstreetmap').add_to(m)
+
 from folium import plugins
 minimap = plugins.MiniMap()
 m.add_child(minimap)
-
 Draw(export=True, filename="data.json").add_to(m)
 folium.LayerControl().add_to(m)
 map_data = st_folium(m, width=700, height=500)
