@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Enhanced Streamlit App for PV Techno-Economic Analysis
-with improved styling, charts, and optional page navigation.
+with combined system type & temperature model section, simplified sizing method logic,
+CO2 savings, and more professional formatting.
 """
 
 import streamlit as st
@@ -42,6 +43,17 @@ st.markdown("""
     }
     .sidebar .sidebar-content {
         background-color: #ebeff2;
+    }
+    .result-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .result-table td {
+        border-bottom: 1px solid #ddd;
+        padding: 8px;
+    }
+    .result-table tr:hover {
+        background-color: #f1f1f1;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -218,33 +230,24 @@ with st.sidebar.expander("Location and Weather Options", expanded=True):
     email = st.text_input('Email for NREL API Key', 'atiqureee@gmail.com')
     NREL_API_KEY = st.text_input('NREL API Key', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
 
-system_type = st.sidebar.selectbox("System Type", ["Ground-mounted PV", "Roof-based PV", "Floating Solar", "Agrivoltaics"])
+with st.sidebar.expander("System Type & Temperature Model", expanded=True):
+    system_type = st.selectbox("System Type", ["Ground-mounted PV", "Roof-based PV", "Floating Solar", "Agrivoltaics"])
 
-if system_type == "Ground-mounted PV":
-    default_model_family = 'sapm'
-    default_sapm_key = 'open_rack_glass_polymer'
-elif system_type == "Roof-based PV":
-    default_model_family = 'sapm'
-    default_sapm_key = 'close_mount_glass_glass'
-elif system_type == "Floating Solar":
-    default_model_family = 'sapm'
-    default_sapm_key = 'open_rack_glass_polymer'
-else:
-    default_model_family = 'sapm'
-    default_sapm_key = 'open_rack_glass_polymer'
+    if system_type == "Ground-mounted PV":
+        default_model_family = 'sapm'
+        default_sapm_key = 'open_rack_glass_polymer'
+    elif system_type == "Roof-based PV":
+        default_model_family = 'sapm'
+        default_sapm_key = 'close_mount_glass_glass'
+    elif system_type == "Floating Solar":
+        default_model_family = 'sapm'
+        default_sapm_key = 'open_rack_glass_polymer'
+    else:
+        default_model_family = 'sapm'
+        default_sapm_key = 'open_rack_glass_polymer'
 
-with st.sidebar.expander("System Configuration", expanded=True):
-    manual_system_size_kw = st.number_input('System Size (kW DC)', value=5.0)
-    packing_factor = st.number_input('Packing Factor (0-1)', value=0.8, min_value=0.0, max_value=1.0)
-    mod_db = pvsystem.retrieve_sam('SandiaMod')
-    inv_db = pvsystem.retrieve_sam('SandiaInverter')
-    module_list = mod_db.columns.tolist()
-    inverter_list = inv_db.columns.tolist()
-    module_name = st.selectbox("Select Module", module_list, index=467)
-    inverter_name = st.selectbox("Select Inverter", inverter_list, index=1337)
-
-    st.subheader("Temperature Model")
     model_family = st.selectbox("Model Family", ["sapm", "pvsyst", "custom"], index=0 if default_model_family == 'sapm' else 2)
+
     if model_family == 'sapm':
         sapm_keys = list(TEMPERATURE_MODEL_PARAMETERS['sapm'].keys())
         sapm_keys.append("Custom SAPM")
@@ -279,6 +282,24 @@ with st.sidebar.expander("System Configuration", expanded=True):
         deltaT = st.number_input('deltaT', value=3)
         temperature_model_parameters = {'a': a, 'b': b, 'deltaT': deltaT, 'model': 'custom'}
 
+with st.sidebar.expander("System Configuration", expanded=True):
+    sizing_method = st.radio("Sizing Method", ["Manual", "Area-based"])
+    mod_db = pvsystem.retrieve_sam('SandiaMod')
+    inv_db = pvsystem.retrieve_sam('SandiaInverter')
+    module_list = mod_db.columns.tolist()
+    inverter_list = inv_db.columns.tolist()
+    module_name = st.selectbox("Select Module", module_list, index=467)
+    inverter_name = st.selectbox("Select Inverter", inverter_list, index=1337)
+
+    if sizing_method == "Manual":
+        manual_system_size_kw = st.number_input('System Size (kW DC)', value=5.0)
+        system_size_kw = manual_system_size_kw
+        system_size_kw_area = None
+    else:
+        manual_system_size_kw = None
+        system_size_kw = None
+        system_size_kw_area = None
+
 with st.sidebar.expander("Financial Inputs", expanded=True):
     installed_cost = st.number_input('Installed Cost', value=default_installed_cost_usd)*cur_factor
     federal_tax_credit_percent = st.number_input('Federal Tax Credit (%)', value=0.0)
@@ -298,11 +319,10 @@ with st.sidebar.expander("Electricity Rate", expanded=True):
     electricity_rate = st.number_input('Electricity Rate ($/kWh)', value=adjusted_default_rate)
 
 st.markdown("## PV System Analysis")
-st.markdown("Use the sidebar to configure your PV system parameters, location, and financial inputs. Then, select or draw an area on the map if you want to size the system based on area.")
+st.markdown("Use the sidebar to configure your parameters. If using Area-based sizing, draw a polygon on the map below.")
 
 st.markdown("#### Map: Select Location & Draw Area")
-m = folium.Map(location=[lat, lon], zoom_start=6)
-folium.TileLayer('OpenStreetMap', name='OSM (default)').add_to(m)
+m = folium.Map(location=[lat, lon], zoom_start=6, tiles='OpenStreetMap')
 folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
 Draw(export=True, filename="data.json").add_to(m)
 folium.LayerControl().add_to(m)
@@ -314,6 +334,7 @@ if 'last_clicked' in map_data and map_data['last_clicked'] is not None:
 
 polygon_area = 0
 possible_modules = 0
+packing_factor = 0.8  # from previous instructions, we can ensure it's defined if needed
 if 'all_drawings' in map_data and map_data['all_drawings'] is not None:
     for feature in map_data['all_drawings']:
         if feature['geometry']['type'] == 'Polygon':
@@ -351,22 +372,19 @@ else:
 module = mod_db[module_name].to_dict()
 inverter = inv_db[inverter_name].to_dict()
 
-if polygon_area > 0:
-    module_area = module['Area']
-    possible_modules = math.floor((polygon_area * packing_factor) / module_area)
-    system_size_w_area = possible_modules * (module['Vmpo'] * module['Impo'])
-    system_size_kw_area = system_size_w_area / 1000
-    sizing_method = st.sidebar.radio("Select Final Sizing Method", ["Manual", "Area-based"], index=0)
-    if sizing_method == "Area-based":
+if sizing_method == "Area-based":
+    if polygon_area > 0:
+        module_area = module['Area']
+        possible_modules = math.floor((polygon_area * packing_factor) / module_area)
+        system_size_w_area = possible_modules * (module['Vmpo'] * module['Impo'])
+        system_size_kw_area = system_size_w_area / 1000
         system_size_kw = system_size_kw_area
     else:
-        system_size_kw = manual_system_size_kw
-
-    st.sidebar.write(f"**Manual Size Input:** {manual_system_size_kw:.2f} kW")
-    st.sidebar.write(f"**Area-based Size:** {system_size_kw_area:.2f} kW (from {possible_modules} modules)")
+        st.warning("No polygon drawn for Area-based sizing. Using default manual size of 5 kW.")
+        system_size_kw = 5.0
 else:
+    # Manual sizing
     system_size_kw = manual_system_size_kw
-    st.sidebar.write(f"No area drawn. Using manual system size: {system_size_kw:.2f} kW")
 
 system_size_mw = system_size_kw/1000
 
@@ -488,17 +506,23 @@ Net_LCC_cost=PV_Life_cycle_cost-Utility_energy_cost_LCC
 Simple_Payback_Period=Total_Capital_Cost/(annual_energy_production_kWh*electricity_rate)
 fixed_charge_rate=1/RPWF
 LCOE=(((Total_Capital_Cost*fixed_charge_rate)+annual_maintenance_costs)/annual_energy_production_kWh)+voc
+
 annual_savings, payback, capex = generate_kpi_metrics(annual_energy_production_kWh, electricity_rate, Total_Capital_Cost, Simple_Payback_Period)
 
+# CO2 Savings
+# Assume 0.7 kg CO2/kWh avoided
+co2_savings_tons = annual_energy_production_kWh * 0.7 / 1000
+
 st.markdown("### Key Performance Indicators")
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Annual Generation (kWh)", f"{annual_energy_production_kWh:,.0f}")
 col2.metric("Annual Savings", f"{annual_savings:,.0f} {currency}")
-col3.metric("Payback Period (yrs)", f"{payback:.2f}")
+col3.metric("Payback (yrs)", f"{payback:.2f}")
 col4.metric("LCOE ($/kWh)", f"{LCOE:.3f}")
+col5.metric("CO2 Savings (tons/yr)", f"{co2_savings_tons:.2f}")
 
-# Tab navigation
-tab_option = st.sidebar.radio("View Sections:", ["Location & Weather", "System Design", "Financials", "Performance Analysis"])
+page_options = ["Location & Weather", "System Design", "Financials", "Performance Analysis"]
+tab_option = st.sidebar.radio("View Sections:", page_options)
 
 if tab_option == "Location & Weather":
     st.subheader("Weather Data")
@@ -508,46 +532,54 @@ if tab_option == "Location & Weather":
     ghi_df = monthly_ghi.reset_index()
     ghi_chart = altair_plot.Chart(ghi_df).mark_line(point=True).encode(
         x=altair_plot.X('index:T', title='Month'),
-        y=altair_plot.Y('ghi:Q', title='GHI (Wh/m²)')
+        y=altair_plot.Y('ghi:Q', title='GHI (Wh/m²)'),
+        tooltip=['index:T','ghi:Q']
     ).properties(title='Monthly GHI').interactive()
     st.altair_chart(ghi_chart, use_container_width=True)
 
 elif tab_option == "System Design":
     st.subheader("System Design Details")
-    st.write(f"**Final System Size Used:** {system_size_kw:.2f} kW (DC)")
-    st.write(f"**Modules in series:** {no_of_series_module}")
-    st.write(f"**Strings per inverter:** {max_parallel_string}")
-    st.write(f"**Inverters needed:** {number_of_inverters_needed}")
-    st.write(f"**Total DC Size:** {total_DC_system_size/1e6:.2f} MW")
-    st.write(f"**Total AC Size:** {total_AC_system_size/1e6:.2f} MW")
-    st.write(f"**DC/AC Ratio:** {dc_ac_ratio:.2f}")
-    if polygon_area > 0:
-        st.write(f"Approx. {possible_modules} modules fit in drawn area.")
-        st.write(f"Area-based Size: {system_size_kw_area:.2f} kW")
-        st.write(f"Manual Input Size: {manual_system_size_kw:.2f} kW")
-    st.write(f"**System Type:** {system_type}")
-    st.write(f"**Temperature Model Family:** {model_family}")
-    st.write("**Selected Temperature Model Parameters:**")
-    st.write(temperature_model_parameters)
+    st.markdown(f"""
+**Final System Size Used:** {system_size_kw:.2f} kW (DC)  
 
+- Modules in series: {no_of_series_module}  
+- Strings per inverter: {max_parallel_string}  
+- Inverters needed: {number_of_inverters_needed}  
+- Total DC Size: {total_DC_system_size/1e6:.2f} MW  
+- Total AC Size: {total_AC_system_size/1e6:.2f} MW  
+- DC/AC Ratio: {dc_ac_ratio:.2f}  
+
+**System Type:** {system_type}
+
+**Temperature Model Family:** {model_family}
+
+**Selected Temperature Model Parameters:**
+```json
+{temperature_model_parameters}
+
+""")
 elif tab_option == "Financials":
     st.subheader("Financial Summary")
-    st.write(f"Total Capital Cost: {Total_Capital_Cost:,.0f} {currency}")
-    st.write(f"Utility Energy Cost LCC: {Utility_energy_cost_LCC:,.0f} {currency}")
-    st.write(f"PV Life Cycle Cost: {PV_Life_cycle_cost:,.0f} {currency}")
-    st.write(f"Net LCC Cost: {Net_LCC_cost:,.0f} {currency}")
-    st.write(f"Simple Payback Period: {Simple_Payback_Period:.2f} years")
-    st.write(f"LCOE: {LCOE:.3f} {currency}/kWh")
-    annual_cashflow = annual_energy_production_kWh*electricity_rate
-    cash_flows = [-Total_Capital_Cost] + [annual_cashflow]*(project_life)
-    npv_val = npf.npv(interest_rate, cash_flows)
-    st.write(f"Net Present Value (NPV): {npv_val:,.0f} {currency}")
+    npv_val = npf.npv(interest_rate, [-Total_Capital_Cost] + [annual_energy_production_kWh*electricity_rate]*(project_life))
+    st.markdown(f"""
+**Financial Summary**
+
+| Item                          | Value ({currency})       |
+|--------------------------------|--------------------------|
+| Total Capital Cost             | {Total_Capital_Cost:,.0f} |
+| Utility Energy Cost LCC        | {Utility_energy_cost_LCC:,.0f} |
+| PV Life Cycle Cost             | {PV_Life_cycle_cost:,.0f} |
+| Net LCC Cost                   | {Net_LCC_cost:,.0f} |
+| Simple Payback Period (years)  | {Simple_Payback_Period:.2f} |
+| LCOE ($/kWh)                   | {LCOE:.3f} |
+| NPV ({currency})               | {npv_val:,.0f} |
+
+""")
 
 elif tab_option == "Performance Analysis":
     st.subheader("Performance Analysis")
     monthly_prod = (energy_production_kW.resample('M').sum())
     monthly_prod_df = monthly_prod.reset_index()
-    # Rename column for clarity
     monthly_prod_df.columns = ['Date', 'energy_production_kW']
     monthly_chart = altair_plot.Chart(monthly_prod_df).mark_bar().encode(
         x=altair_plot.X('Date:T', title='Month'),
@@ -563,10 +595,14 @@ elif tab_option == "Performance Analysis":
     Performance_Ratio=Final_Yield/Reference_Yield
     Capacity_Factor=((annual_energy_production_kWh)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed*8760))*1000
 
-    st.write(f"Reference Yield (kWh/m²): {Reference_Yield:.2f}")
-    st.write(f"Final Yield (kWh/m²): {Final_Yield:.2f}")
-    st.write(f"Performance Ratio (%): {Performance_Ratio*100:.2f}")
-    st.write(f"Capacity Factor (%): {Capacity_Factor*100:.2f}")
+    st.markdown(f"""
+**Additional Performance Metrics**
+
+- Reference Yield (kWh/m²): {Reference_Yield:.2f}
+- Final Yield (kWh/m²): {Final_Yield:.2f}
+- Performance Ratio (%): {Performance_Ratio*100:.2f}
+- Capacity Factor (%): {Capacity_Factor*100:.2f}
+""")
 
 st.markdown("---")
 st.write("**Note:** This is a demonstration tool. Adjust inputs and location as needed. Powered by pvlib Python.")
