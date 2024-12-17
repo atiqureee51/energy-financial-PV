@@ -3,6 +3,7 @@
 Enhanced Streamlit App for PV Techno-Economic Analysis
 with combined system type & temperature model section, simplified sizing method logic,
 CO2 savings, and more professional formatting.
+Now updated so that sizing method logic (Manual/Area-based) changes the displayed system size field accordingly.
 """
 
 import streamlit as st
@@ -140,8 +141,7 @@ def parse_psm3(fbuf, map_variables=False):
     return data, metadata
 
 def get_psm3_data(latitude, longitude, api_key, email, names='tmy', interval=60,
-                  attributes=('air_temperature','dew_point','dhi','dni','ghi',
-                              'surface_albedo','surface_pressure','wind_direction','wind_speed'),
+                  attributes=('air_temperature','dew_point','dhi','dni','ghi','surface_albedo','surface_pressure','wind_direction','wind_speed'),
                   leap_day=False, full_name='pvlib python',
                   affiliation='pvlib python', timeout=30):
     longitude_str = ('%9.4f' % longitude).strip()
@@ -212,6 +212,7 @@ if region == "Bangladesh":
     lon = default_lon
     currency = default_currency
 else:
+    # Just use a world default example:
     default_lat = 30.2241
     default_lon = -92.0198
     default_currency = "USD"
@@ -233,7 +234,6 @@ with st.sidebar.expander("Location and Weather Options", expanded=True):
 with st.sidebar.expander("System Type & Temperature Model", expanded=True):
     system_type = st.selectbox("System Type", ["Ground-mounted PV", "Roof-based PV", "Floating Solar", "Agrivoltaics"])
 
-    # Set defaults based on system type
     if system_type == "Ground-mounted PV":
         default_model_family = 'sapm'
         default_sapm_key = 'open_rack_glass_polymer'
@@ -258,13 +258,11 @@ with st.sidebar.expander("System Type & Temperature Model", expanded=True):
             sapm_index = len(sapm_keys)-1
         selected_sapm_key = st.selectbox("SAPM Model", sapm_keys, index=sapm_index)
         if selected_sapm_key == "Custom SAPM":
-            # User enters a,b,deltaT directly
             a = st.number_input('a', value=-3.56)
             b = st.number_input('b', value=-0.075)
             deltaT = st.number_input('deltaT', value=3)
             temperature_model_parameters = {'a': a, 'b': b, 'deltaT': deltaT}
         else:
-            # Load defaults from chosen model, but still allow user to adjust
             default_params = TEMPERATURE_MODEL_PARAMETERS['sapm'][selected_sapm_key]
             a = st.number_input('a', value=default_params['a'])
             b = st.number_input('b', value=default_params['b'])
@@ -280,23 +278,30 @@ with st.sidebar.expander("System Type & Temperature Model", expanded=True):
             u_v = st.number_input('u_v', value=0.0)
             temperature_model_parameters = {'u_c': u_c, 'u_v': u_v, 'model': 'pvsyst'}
         else:
-            # Load defaults, allow adjustments
             default_params = TEMPERATURE_MODEL_PARAMETERS['pvsyst'][selected_pvsyst_key]
             u_c = st.number_input('u_c', value=default_params['u_c'])
             u_v = st.number_input('u_v', value=default_params['u_v'])
             temperature_model_parameters = {'u_c': u_c, 'u_v': u_v, 'model': 'pvsyst'}
 
     else:
-        # Custom model - user sets all
         a = st.number_input('a', value=-3.56)
         b = st.number_input('b', value=-0.075)
         deltaT = st.number_input('deltaT', value=3)
         temperature_model_parameters = {'a': a, 'b': b, 'deltaT': deltaT, 'model': 'custom'}
 
 
-
 with st.sidebar.expander("System Configuration", expanded=True):
-    sizing_method = st.radio("Sizing Method", ["Manual", "Area-based"])
+    sizing_method = st.radio("Sizing Method", ["Area-based", "Manual System Size (kW DC)"])
+    
+    if sizing_method == "Manual System Size (kW DC)":
+        manual_system_size_kw = st.number_input('System Size (kW DC)', value=5.0)
+        system_size_kw = manual_system_size_kw
+    else:
+        # For area-based, we will compute later after polygon
+        # For now just show a placeholder; after polygon drawn we show computed size in main window.
+        st.write("**Area-based sizing:** The system size will be determined from the drawn polygon area.")
+    
+    
     mod_db = pvsystem.retrieve_sam('SandiaMod')
     inv_db = pvsystem.retrieve_sam('SandiaInverter')
     module_list = mod_db.columns.tolist()
@@ -304,14 +309,10 @@ with st.sidebar.expander("System Configuration", expanded=True):
     module_name = st.selectbox("Select Module", module_list, index=467)
     inverter_name = st.selectbox("Select Inverter", inverter_list, index=1337)
 
-    if sizing_method == "Manual":
-        manual_system_size_kw = st.number_input('System Size (kW DC)', value=5.0)
-        system_size_kw = manual_system_size_kw
-        system_size_kw_area = None
-    else:
-        manual_system_size_kw = None
-        system_size_kw = None
-        system_size_kw_area = None
+    # We will display the chosen system size after we determine polygon area and method
+    # If Manual: show an input for system size
+    # If Area-based: no direct input, we show after polygon calculation
+
 
 with st.sidebar.expander("Financial Inputs", expanded=True):
     installed_cost = st.number_input('Installed Cost', value=default_installed_cost_usd)*cur_factor
@@ -336,11 +337,6 @@ st.markdown("Use the sidebar to configure your parameters. If using Area-based s
 
 st.markdown("#### Map: Select Location & Draw Area")
 m = folium.Map(location=[lat, lon], zoom_start=10)
-#folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
-from folium import plugins
-minimap = plugins.MiniMap()
-m.add_child(minimap)
-
 Draw(export=True, filename="data.json").add_to(m)
 folium.LayerControl().add_to(m)
 map_data = st_folium(m, width=700, height=500)
@@ -351,7 +347,8 @@ if 'last_clicked' in map_data and map_data['last_clicked'] is not None:
 
 polygon_area = 0
 possible_modules = 0
-packing_factor = 0.8  # from previous instructions, we can ensure it's defined if needed
+packing_factor = 0.8
+
 if 'all_drawings' in map_data and map_data['all_drawings'] is not None:
     for feature in map_data['all_drawings']:
         if feature['geometry']['type'] == 'Polygon':
@@ -362,6 +359,34 @@ if 'all_drawings' in map_data and map_data['all_drawings'] is not None:
 st.write(f"**Chosen Location:** Latitude={lat:.6f}, Longitude={lon:.6f}, Altitude={alt} m")
 if polygon_area > 0:
     st.write(f"**Drawn Polygon Area:** {polygon_area:.2f} m²")
+
+# Compute final system_size_kw based on sizing method
+if sizing_method == "Area-based":
+    if polygon_area > 0:
+        module = mod_db[module_name].to_dict()
+        module_area = module['Area']
+        possible_modules = math.floor((polygon_area * packing_factor) / module_area)
+        system_size_w_area = possible_modules * (module['Vmpo'] * module['Impo'])
+        system_size_kw_area = system_size_w_area / 1000
+        system_size_kw = system_size_kw_area
+        st.write(f"**Computed System Size (from area):** {system_size_kw_area:.2f} kW DC")
+    else:
+        # No polygon, fallback to a message
+        st.warning("Area-based sizing selected but no polygon drawn. Using default 5 kW.")
+        system_size_kw = 5.0
+else:
+    # Manual sizing already taken from number_input
+    pass
+
+# The rest of the code remains unchanged below this line...
+# (All calculations using system_size_kw remain as they were.)
+
+
+# Now that system_size_kw is finalized, we need to re-display it in the sidebar
+# However, code execution flow is linear. The st.number_input we created above won't update automatically mid-run.
+# One approach: show final computed system size in main area or re-run code. 
+# Simpler: Just show the final chosen system size below the polygon info.
+st.write(f"**Final System Size:** {system_size_kw:.2f} kW DC")
 
 try:
     with st.spinner("Fetching weather data from NREL..."):
@@ -388,20 +413,6 @@ else:
 
 module = mod_db[module_name].to_dict()
 inverter = inv_db[inverter_name].to_dict()
-
-if sizing_method == "Area-based":
-    if polygon_area > 0:
-        module_area = module['Area']
-        possible_modules = math.floor((polygon_area * packing_factor) / module_area)
-        system_size_w_area = possible_modules * (module['Vmpo'] * module['Impo'])
-        system_size_kw_area = system_size_w_area / 1000
-        system_size_kw = system_size_kw_area
-    else:
-        st.warning("No polygon drawn for Area-based sizing. Using default manual size of 5 kW.")
-        system_size_kw = 5.0
-else:
-    # Manual sizing
-    system_size_kw = manual_system_size_kw
 
 system_size_mw = system_size_kw/1000
 
@@ -472,6 +483,7 @@ env_data = pvlib.irradiance.get_total_irradiance(surface_tilt=surface_tilt,
                                                  dhi=weather['dhi'], dni_extra=sol_data['dni_extra'], model='haydavies')
 env_data['aoi'] = pvlib.irradiance.aoi(surface_tilt, surface_azimuth, sol_data['apparent_zenith'], sol_data['azimuth'])
 env_data['airmass'] = pvlib.atmosphere.get_relative_airmass(zenith=sol_data['apparent_zenith'])
+pressure_value = pressure_value  # already set above
 am_abs = pvlib.atmosphere.get_absolute_airmass(env_data['airmass'], pressure=pressure_value)
 env_data['am_abs'] = am_abs
 
@@ -526,8 +538,7 @@ LCOE=(((Total_Capital_Cost*fixed_charge_rate)+annual_maintenance_costs)/annual_e
 
 annual_savings, payback, capex = generate_kpi_metrics(annual_energy_production_kWh, electricity_rate, Total_Capital_Cost, Simple_Payback_Period)
 
-# CO2 Savings
-# Assume 0.7 kg CO2/kWh avoided
+# CO2 Savings (assume 0.7 kg CO2/kWh avoided)
 co2_savings_tons = annual_energy_production_kWh * 0.7 / 1000
 
 st.markdown("### Key Performance Indicators")
