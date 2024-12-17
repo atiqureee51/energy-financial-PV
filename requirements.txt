@@ -11,4 +11,5 @@ folium
 altair
 shapely
 pyproj
+ydata-profiling
 streamlit-pandas-profiling
