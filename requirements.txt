@@ -12,4 +12,5 @@ altair
 shapely
 pyproj
 ydata-profiling
+pandas-profiling
 streamlit-pandas-profiling
