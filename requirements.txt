@@ -6,3 +6,6 @@ seaborn
 matplotlib
 urllib3
 json5
+streamlit-folium
+folium
+altair
