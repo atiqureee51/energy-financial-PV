@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Enhanced Streamlit App for PV Techno-Economic Analysis
-with styling, correct array definition, and altair plotting fixes.
+with improved styling, charts, and optional page navigation.
 """
 
 import streamlit as st
@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 import pvlib
 from pvlib import location, pvsystem, modelchain
-from pvlib import irradiance
 import math
 import requests
 import io
@@ -25,14 +24,24 @@ from pyproj import Transformer
 
 st.set_page_config(page_title="PV Techno-Economic Analysis", layout='wide')
 
-# Styling
+# Additional Styling
 st.markdown("""
     <style>
+    body {
+        background-color: #f9f9f9;
+        font-family: "Helvetica", sans-serif;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #1f2e3d;
+    }
     .stMetric {
         background-color: #f0f2f6;
         padding: 1rem;
         border-radius: 0.5rem;
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    .sidebar .sidebar-content {
+        background-color: #ebeff2;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -270,10 +279,6 @@ with st.sidebar.expander("System Configuration", expanded=True):
         deltaT = st.number_input('deltaT', value=3)
         temperature_model_parameters = {'a': a, 'b': b, 'deltaT': deltaT, 'model': 'custom'}
 
-with st.sidebar.expander("Area-Based Sizing (Optional)", expanded=True):
-    # Will display after polygon is drawn in main section
-    pass
-
 with st.sidebar.expander("Financial Inputs", expanded=True):
     installed_cost = st.number_input('Installed Cost', value=default_installed_cost_usd)*cur_factor
     federal_tax_credit_percent = st.number_input('Federal Tax Credit (%)', value=0.0)
@@ -292,9 +297,10 @@ with st.sidebar.expander("Electricity Rate", expanded=True):
     adjusted_default_rate = get_default_electricity_rate(lat, lon)*cur_factor
     electricity_rate = st.number_input('Electricity Rate ($/kWh)', value=adjusted_default_rate)
 
-st.title("PV Techno-Economic Analysis Dashboard")
+st.markdown("## PV System Analysis")
+st.markdown("Use the sidebar to configure your PV system parameters, location, and financial inputs. Then, select or draw an area on the map if you want to size the system based on area.")
 
-st.markdown("#### Map: Select Location & Draw Area for Optional Area-Based Sizing")
+st.markdown("#### Map: Select Location & Draw Area")
 m = folium.Map(location=[lat, lon], zoom_start=6)
 folium.TileLayer('OpenStreetMap', name='OSM (default)').add_to(m)
 folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
@@ -484,27 +490,30 @@ fixed_charge_rate=1/RPWF
 LCOE=(((Total_Capital_Cost*fixed_charge_rate)+annual_maintenance_costs)/annual_energy_production_kWh)+voc
 annual_savings, payback, capex = generate_kpi_metrics(annual_energy_production_kWh, electricity_rate, Total_Capital_Cost, Simple_Payback_Period)
 
+st.markdown("### Key Performance Indicators")
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Annual Generation (kWh)", f"{annual_energy_production_kWh:,.0f}")
 col2.metric("Annual Savings", f"{annual_savings:,.0f} {currency}")
 col3.metric("Payback Period (yrs)", f"{payback:.2f}")
 col4.metric("LCOE ($/kWh)", f"{LCOE:.3f}")
 
-tab1, tab2, tab3, tab4 = st.tabs(["Location & Weather", "System Design", "Financials", "Performance Analysis"])
+# Tab navigation
+tab_option = st.sidebar.radio("View Sections:", ["Location & Weather", "System Design", "Financials", "Performance Analysis"])
 
-with tab1:
+if tab_option == "Location & Weather":
     st.subheader("Weather Data")
     if st.checkbox('Show raw weather data'):
         st.dataframe(weather)
     monthly_ghi = weather['ghi'].resample('M').sum()
-    # Use altair_plot instead of alt
     ghi_df = monthly_ghi.reset_index()
     ghi_chart = altair_plot.Chart(ghi_df).mark_line(point=True).encode(
-        x='index:T', y='ghi:Q'
-    ).properties(title='Monthly GHI')
+        x=altair_plot.X('index:T', title='Month'),
+        y=altair_plot.Y('ghi:Q', title='GHI (Wh/m²)')
+    ).properties(title='Monthly GHI').interactive()
     st.altair_chart(ghi_chart, use_container_width=True)
 
-with tab2:
+elif tab_option == "System Design":
+    st.subheader("System Design Details")
     st.write(f"**Final System Size Used:** {system_size_kw:.2f} kW (DC)")
     st.write(f"**Modules in series:** {no_of_series_module}")
     st.write(f"**Strings per inverter:** {max_parallel_string}")
@@ -521,7 +530,7 @@ with tab2:
     st.write("**Selected Temperature Model Parameters:**")
     st.write(temperature_model_parameters)
 
-with tab3:
+elif tab_option == "Financials":
     st.subheader("Financial Summary")
     st.write(f"Total Capital Cost: {Total_Capital_Cost:,.0f} {currency}")
     st.write(f"Utility Energy Cost LCC: {Utility_energy_cost_LCC:,.0f} {currency}")
@@ -534,14 +543,17 @@ with tab3:
     npv_val = npf.npv(interest_rate, cash_flows)
     st.write(f"Net Present Value (NPV): {npv_val:,.0f} {currency}")
 
-with tab4:
+elif tab_option == "Performance Analysis":
     st.subheader("Performance Analysis")
     monthly_prod = (energy_production_kW.resample('M').sum())
     monthly_prod_df = monthly_prod.reset_index()
+    # Rename column for clarity
+    monthly_prod_df.columns = ['Date', 'energy_production_kW']
     monthly_chart = altair_plot.Chart(monthly_prod_df).mark_bar().encode(
-        x=altair_plot.X('index:T', title='Month'),
-        y=altair_plot.Y('energy_production_kW:O', title='Energy (kWh)'),
-    ).properties(title='Monthly Energy Production')
+        x=altair_plot.X('Date:T', title='Month'),
+        y=altair_plot.Y('energy_production_kW:Q', title='Energy (kWh)'),
+        tooltip=['Date:T', 'energy_production_kW:Q']
+    ).properties(title='Monthly Energy Production').interactive()
     st.altair_chart(monthly_chart, use_container_width=True)
 
     poa_wh_m2=(env_data['poa_global'])
