@@ -11,3 +11,4 @@ folium
 altair
 shapely
 pyproj
+streamlit-pandas-profiling
