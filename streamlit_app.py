@@ -1,153 +1,56 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri May  6 12:07:05 2022
-
-@author: Atiqur rahaman
+Revised Streamlit App for PV Techno-Economic Analysis
 """
-#https://nsrdb.nrel.gov/data-viewer
-#https://pvlib-python.readthedocs.io/en/stable/_modules/pvlib/iotools/psm3.html#get_psm3
-#https://developer.nrel.gov/docs/solar/nsrdb/psm3-tmy-download/
-
-
-import pvlib
-from pvlib import location
-from pvlib import irradiance
-import pandas as pd
-import matplotlib.pyplot as plt
-import math
-
-import time
-import numpy as np
-
-
-from pvlib.pvsystem import PVSystem, FixedMount
-from pvlib.location import Location
-from pvlib.modelchain import ModelChain
-from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-
-from distutils import errors
-from distutils.log import error
+import pvlib
+from pvlib import location
+from pvlib import irradiance
+import matplotlib.pyplot as plt
+import math
+import time
+import requests
+import io
+from json import JSONDecodeError
+import warnings
+import numpy_financial as npf
 import altair as alt
-from itertools import cycle
+import folium
+from folium.plugins import Draw
+from streamlit_folium import st_folium
+from pvlib.pvsystem import PVSystem
+from pvlib.location import Location
+from pvlib.modelchain import ModelChain
+from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 
-#from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
+st.set_page_config(page_title="PV Techno-Economic Analysis", layout='wide')
 
+# ----------------------------------------------
+# Default values and configuration
+# ----------------------------------------------
+default_lat = 23.8103   # Dhaka, Bangladesh
+default_lon = 90.4125
+default_alt = 13
+default_currency = "USD"
+currency_conversion = {"USD": 1, "BDT": 110}  # Approx conversion for demonstration
 
-# Add social media tags and links to the web page.
-"""
-# Technical and Financial Model of a PV system
-"""
-# Add a sidebar to the web page. 
-st.markdown('---')
-#st.title('Technical and Financial Model of a PV system')
-
-DATE_COLUMN = 'date/time'
-DATA_URL = ('https://s3-us-west-2.amazonaws.com/'
-            'streamlit-demo-data/uber-raw-data-sep14.csv.gz')
-
-#@st.cache(allow_output_mutation=True)
-
-
-def load_data(nrows):
-    data = pd.read_csv(DATA_URL, nrows=nrows)
-    lowercase = lambda x: str(x).lower()
-    data.rename(lowercase, axis='columns', inplace=True)
-    data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
-    return data
-
-#data_load_state = st.text('Loading data...')
-data = load_data(10000)
-#data_load_state.text("Done! (using st.cache)")
-
-#if st.checkbox('Show raw data'):
-#    st.subheader('Raw data')
-#    st.write(data)
-
-
-#st.subheader('Raw data')
-## 1. Enter the location of the PV system and obtain a weather file for that location
-
-st.subheader('Enter the location of the PV system and obtain techno-economic analysis for that location')
-
-lat = st.sidebar.number_input('Insert the latitude, example =30.2671 ',value=30.2671,format="%.4f")
-#lat=29.99
-#st.write('The current number is ', lat)
-lon=st.sidebar.number_input('Insert the longitude, example = -92.0981',value=-92.0981,format="%.4f")
-#st.write('The current number is ', lon)
-#lon=-91.89
-
-alt=st.sidebar.number_input('Insert the altitude, example =13 ',value=13)
-## 2. Enter the approximate desired annual energy production (kWh/year)
-system_size= 5 # in MW in dc
-
-df_map = pd.DataFrame({'lat': [lat],'lon': [lon]})
-#df_map["lat"]=lat
-#df_map["lon"]=lon
-
-st.write('Location: ')
-st.map(df_map, zoom=11)
-
-
-email1='atiqureee@gmail.com'
-#email='atiqureee111@gmail.com'
-email = st.sidebar.text_input('email for the NREL API KEY', 'atiqureee@gmail.com')
-#st.write('The email is', email)
-
-
-#NREL_API_KEY2 = 'Hmf84x6KdrFhF4FGdtH8MRD2bWObpR7YYUvwhgd3'  # <-- please set your NREL API key here
-NREL_API_KEY='qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK'  
-NREL_API_KEY = st.sidebar.text_input('Go to https://developer.nrel.gov/signup/ to get the NREL_API_KEY', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
-#st.write('The NREL_API_KEY is', NREL_API_KEY)
-
-
-
-
-### all value collection
-
-
-import copy
-
+# ----------------------------------------------
+# Helper functions
+# ----------------------------------------------
 NSRDB_API_BASE = "https://developer.nrel.gov"
 PSM_URL1 = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-download.csv"
 TMY_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-tmy-download.csv"
 PSM5MIN_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-5min-download.csv"
+MSG_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/msg-iodc-download.csv"
+HIMAWARI_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/himawari-download.csv"
 
-if lon>-16 and lon<91:
-            PSM_URL=NSRDB_API_BASE + "/api/nsrdb/v2/solar/msg-iodc-download.csv"
-elif lon>91 and lon<182:
-            PSM_URL=NSRDB_API_BASE + "/api/nsrdb/v2/solar/himawari-download.csv"
-else:
-            PSM_URL=copy.deepcopy(PSM_URL1)
-#url = "http://developer.nrel.gov/api/nsrdb/v2/solar/msg-iodc-download.json?api_key=yourapikeygoeshere"
-
-
-#weather, metadata=pvlib.iotools.get_psm3(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=60)
-
-
-
-
-
-
-
-
-import io
-import requests
-import pandas as pd
-from json import JSONDecodeError
-import warnings
-from pvlib._deprecation import pvlibDeprecationWarning
-
-# 'relative_humidity', 'total_precipitable_water' are not available
 ATTRIBUTES = (
     'air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo',
     'surface_pressure', 'wind_direction', 'wind_speed')
-PVLIB_PYTHON = 'pvlib python'
 
-# Dictionary mapping PSM3 names to pvlib names
 VARIABLE_MAP = {
     'GHI': 'ghi',
     'DHI': 'dhi',
@@ -166,114 +69,40 @@ VARIABLE_MAP = {
     'Precipitable Water': 'precipitable_water',
 }
 
-
-def get_psm3(latitude, longitude, api_key, email, names='tmy', interval=60,
-             attributes=ATTRIBUTES, leap_day=None, full_name=PVLIB_PYTHON,
-             affiliation=PVLIB_PYTHON, map_variables=None, timeout=30):
-    # The well know text (WKT) representation of geometry notation is strict.
-    # A POINT object is a string with longitude first, then the latitude, with
-    # four decimals each, and exactly one space between them.
-    longitude = ('%9.4f' % longitude).strip()
-    latitude = ('%8.4f' % latitude).strip()
-    # TODO: make format_WKT(object_type, *args) in tools.py
-
-    # convert to string to accomodate integer years being passed in
-    names = str(names)
-
-    # convert pvlib names in attributes to psm3 convention (reverse mapping)
-    # unlike psm3 columns, attributes are lower case and with underscores
-    amap = {value: key.lower().replace(' ', '_') for (key, value) in
-            VARIABLE_MAP.items()}
-    attributes = [amap.get(a, a) for a in attributes]
-    attributes = list(set(attributes))  # remove duplicate values
-
-    if (leap_day is None) and (not names.startswith('t')):
-        warnings.warn(
-            'The ``get_psm3`` function will default to leap_day=True '
-            'starting in pvlib 0.11.0. Specify leap_day=True '
-            'to enable this behavior now, or specify leap_day=False '
-            'to hide this warning.', pvlibDeprecationWarning)
-        leap_day = False
-
-    # required query-string parameters for request to PSM3 API
-    params = {
-        'api_key': api_key,
-        'full_name': full_name,
-        'email': email,
-        'affiliation': affiliation,
-        'reason': PVLIB_PYTHON,
-        'mailing_list': 'false',
-        'wkt': 'POINT(%s %s)' % (longitude, latitude),
-        'names': names,
-        'attributes':  ','.join(attributes),
-        'leap_day': str(leap_day).lower(),
-        'utc': 'false',
-        'interval': interval
-    }
-    # request CSV download from NREL PSM3
-    if any(prefix in names for prefix in ('tmy', 'tgy', 'tdy')):
-        URL = TMY_URL
-    elif interval in (5, 15):
-        URL = PSM5MIN_URL
+def get_psm_url(lon):
+    # Rough logic to select URL based on longitude
+    if -16 < lon < 91:
+        return MSG_URL
+    elif 91 <= lon < 182:
+        return HIMAWARI_URL
     else:
-        URL = PSM_URL
-    response = requests.get(URL, params=params, timeout=timeout)
-    if not response.ok:
-        # if the API key is rejected, then the response status will be 403
-        # Forbidden, and then the error is in the content and there is no JSON
-        try:
-            errors = response.json()['errors']
-        except JSONDecodeError:
-            errors = response.content.decode('utf-8')
-        raise requests.HTTPError(errors, response=response)
-    # the CSV is in the response content as a UTF-8 bytestring
-    # to use pandas we need to create a file buffer from the response
-    fbuf = io.StringIO(response.content.decode('utf-8'))
-    return parse_psm3(fbuf, map_variables)
+        return PSM_URL1
 
-
-
-def parse_psm3(fbuf, map_variables=None):
-
-    # The first 2 lines of the response are headers with metadata
+def parse_psm3(fbuf, map_variables=False):
     metadata_fields = fbuf.readline().split(',')
-    metadata_fields[-1] = metadata_fields[-1].strip()  # strip trailing newline
+    metadata_fields[-1] = metadata_fields[-1].strip()
     metadata_values = fbuf.readline().split(',')
-    metadata_values[-1] = metadata_values[-1].strip()  # strip trailing newline
+    metadata_values[-1] = metadata_values[-1].strip()
     metadata = dict(zip(metadata_fields, metadata_values))
-    # the response is all strings, so set some metadata types to numbers
     metadata['Local Time Zone'] = int(metadata['Local Time Zone'])
     metadata['Time Zone'] = int(metadata['Time Zone'])
     metadata['Latitude'] = float(metadata['Latitude'])
     metadata['Longitude'] = float(metadata['Longitude'])
     metadata['Elevation'] = int(metadata['Elevation'])
-    # get the column names so we can set the dtypes
     columns = fbuf.readline().split(',')
-    columns[-1] = columns[-1].strip()  # strip trailing newline
-    # Since the header has so many columns, excel saves blank cols in the
-    # data below the header lines.
+    columns[-1] = columns[-1].strip()
     columns = [col for col in columns if col != '']
-    dtypes = dict.fromkeys(columns, float)  # all floats except datevec
+    dtypes = dict.fromkeys(columns, float)
     dtypes.update(Year=int, Month=int, Day=int, Hour=int, Minute=int)
     dtypes['Cloud Type'] = int
     dtypes['Fill Flag'] = int
     data = pd.read_csv(
         fbuf, header=None, names=columns, usecols=columns, dtype=dtypes,
-        delimiter=',', lineterminator='\n')  # skip carriage returns \r
-    # the response 1st 5 columns are a date vector, convert to datetime
-    dtidx = pd.to_datetime(
-        data[['Year', 'Month', 'Day', 'Hour', 'Minute']])
-    # in USA all timezones are integers
+        delimiter=',', lineterminator='\n')
+    dtidx = pd.to_datetime(data[['Year', 'Month', 'Day', 'Hour', 'Minute']])
     tz = 'Etc/GMT%+d' % -metadata['Time Zone']
     data.index = pd.DatetimeIndex(dtidx).tz_localize(tz)
 
-    if map_variables is None:
-        warnings.warn(
-            'PSM3 variable names will be renamed to pvlib conventions by '
-            'default starting in pvlib 0.11.0. Specify map_variables=True '
-            'to enable that behavior now, or specify map_variables=False '
-            'to hide this warning.', pvlibDeprecationWarning)
-        map_variables = False
     if map_variables:
         data = data.rename(columns=VARIABLE_MAP)
         metadata['latitude'] = metadata.pop('Latitude')
@@ -282,448 +111,352 @@ def parse_psm3(fbuf, map_variables=None):
 
     return data, metadata
 
+def get_psm3_data(latitude, longitude, api_key, email, names='tmy', interval=60,
+                  attributes=ATTRIBUTES, leap_day=False, full_name='pvlib python',
+                  affiliation='pvlib python', timeout=30):
+    # Prepare params
+    longitude_str = ('%9.4f' % longitude).strip()
+    latitude_str = ('%8.4f' % latitude).strip()
+    params = {
+        'api_key': api_key,
+        'full_name': full_name,
+        'email': email,
+        'affiliation': affiliation,
+        'reason': 'pvlib python',
+        'mailing_list': 'false',
+        'wkt': f'POINT({longitude_str} {latitude_str})',
+        'names': names,
+        'attributes': ','.join(attributes),
+        'leap_day': str(leap_day).lower(),
+        'utc': 'false',
+        'interval': interval
+    }
 
-weather, metadata=get_psm3(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo', 'surface_pressure', 'wind_direction', 'wind_speed'), leap_day=False, full_name='pvlib python', affiliation='pvlib python', map_variables=None, timeout=60)
+    if any(prefix in names for prefix in ('tmy', 'tgy', 'tdy')):
+        URL = TMY_URL
+    elif interval in (5,15):
+        URL = PSM5MIN_URL
+    else:
+        URL = get_psm_url(longitude)
 
+    response = requests.get(URL, params=params, timeout=timeout)
+    if not response.ok:
+        try:
+            errors = response.json()['errors']
+        except JSONDecodeError:
+            errors = response.content.decode('utf-8')
+        raise requests.HTTPError(errors, response=response)
 
+    fbuf = io.StringIO(response.content.decode('utf-8'))
+    data, metadata = parse_psm3(fbuf, map_variables=True)
+    return data, metadata
 
+def compute_area_of_polygon(latlon_list):
+    # latlon_list: list of tuples [(lat, lon), (lat, lon), ...]
+    # We'll use a simple planar approximation (not extremely accurate for large areas).
+    # Convert lat/lon to radians and use a polygon area formula.
+    # For small areas this is enough as a demonstration.
+    # If more accuracy required, use geopy or shapely.
+    if len(latlon_list) < 3:
+        return 0
+    import shapely.geometry
+    polygon = shapely.geometry.Polygon([(pt[1], pt[0]) for pt in latlon_list]) # (lon, lat)
+    # Area in square meters if we transform properly. 
+    # By default, polygon area will be in degrees. Let's approximate:
+    # We'll use a rough method: 
+    # Convert lat/lon degrees to meters using a rough conversion:
+    # 1 degree of lat ~ 111,320 meters
+    # 1 degree of lon ~ 111,320 * cos(lat)
+    # Better approach: Just use shapely+pyproj for correct area. For demonstration:
+    from pyproj import Transformer
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    coords_3857 = [transformer.transform(pt[1], pt[0]) for pt in latlon_list]
+    polygon_3857 = shapely.geometry.Polygon(coords_3857)
+    return polygon_3857.area
 
+def generate_kpi_metrics(annual_energy_kwh, electricity_rate, total_capital_cost, simple_payback):
+    total_annual_savings = annual_energy_kwh * electricity_rate
+    return total_annual_savings, simple_payback, total_capital_cost
 
+# ----------------------------------------------
+# Sidebar Inputs
+# ----------------------------------------------
+st.sidebar.title("User Inputs")
 
+# Currency selection
+currency = st.sidebar.selectbox("Select Currency:", ["USD", "BDT"])
+cur_factor = currency_conversion[currency]
 
+with st.sidebar.expander("Location and Weather Options"):
+    st.write("Pan and click on the map in the main section to choose location or enter manually.")
+    lat = st.number_input('Latitude', value=default_lat, format="%.6f")
+    lon = st.number_input('Longitude', value=default_lon, format="%.6f")
+    alt = st.number_input('Altitude (m)', value=default_alt)
+    email = st.text_input('Email for NREL API Key', 'example@gmail.com')
+    NREL_API_KEY = st.text_input('NREL API Key', 'YOUR_NREL_API_KEY_HERE')
 
+with st.sidebar.expander("System Size & Configuration"):
+    system_size_mw = st.number_input('System Size (MW DC)', value=5.0)
+    # Loss parameters can be adjusted or left as defaults
+    total_loss = {'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'connections':0, 'lid':0, 'nameplate_rating':0, 'age':0, 'availability':0}
+    surface_tilt = st.number_input('Surface Tilt (deg)', value=30)
+    surface_azimuth = st.number_input('Surface Azimuth (deg)', value=180)
 
-if st.checkbox('Show raw weather data'):
-    st.subheader('Raw downloaded weather data')
-    st.write(weather)
-# Setting up columns
+with st.sidebar.expander("Financial Inputs"):
+    installed_cost = st.number_input('Installed Cost', value=4328468.17)*cur_factor
+    federal_tax_credit_percent = st.number_input('Federal Tax Credit (%)', value=0.0)
+    state_tax_credit_percent = st.number_input('State Tax Credit (%)', value=0.0)
+    rebates_percent = st.number_input('Rebate (%)', value=0.0)
+    interest_rate = st.number_input('Interest Rate (%)', value=4.0)/100
+    project_life = st.number_input('Project Life (years)', value=25)
+    annual_maintenance_costs = st.number_input('Annual Maintenance ($)', value=15000.0)*cur_factor
+    years_to_inverter_replacement = st.number_input('Years to Inverter Replacement', value=10)
+    inverter_cost = st.number_input('Inverter Cost ($)', value=10000.0)*cur_factor
+    salvage_percent = st.number_input('Salvage Value (%) of installed cost', value=5.0)
+    salvage_value = salvage_percent/100 * installed_cost
+    voc = st.number_input('Variable Operating Cost ($/kWh)', value=0.0)*cur_factor
+    electricity_rate = st.number_input('Electricity Rate ($/kWh)', value=0.1)*cur_factor
+    term_of_loan = st.number_input('Term of Loan (years)', value=25)
+    amount_financed = st.number_input('Amount Financed (%)', value=100)/100
+    annual_payments = st.number_input('Number of Annual Payments', value=3)
+    discount_rate = interest_rate
 
-#c1,c2= st.columns([1,1])
+# ----------------------------------------------
+# Main Layout
+# ----------------------------------------------
+st.title("PV Techno-Economic Analysis")
 
-# Widgets: checkbox (you can replace st.xx with st.sidebar.xx)
-#if c2.checkbox("Show Dataframe"):
-#    st.subheader("The weather dataset:")
-#    st.dataframe(data=weather)
-    #st.table(data=weather)
+# Map selection with folium
+st.subheader("Select Location")
+m = folium.Map(location=[lat, lon], zoom_start=6, tiles="OpenStreetMap")
+Draw(export=True, filename="data.json").add_to(m)
+clicked = st_folium(m, width=700, height=500)
 
-#weather.to_csv('/data/weather.csv')
-#c1.download_button("Download CSV File", data='/data/weather.csv', file_name="weather.csv", mime='text/csv')
+# Update lat/lon if user clicks on map
+if 'last_clicked' in clicked and clicked['last_clicked'] is not None:
+    lat = clicked['last_clicked']['lat']
+    lon = clicked['last_clicked']['lng']
 
-##chart
-chart_data = pd.DataFrame(weather["GHI"],weather["Temperature"],weather["Wind Speed"])
+# Get polygon for area
+polygon_area = 0
+if 'all_drawings' in clicked and clicked['all_drawings'] is not None:
+    for feature in clicked['all_drawings']:
+        if feature['geometry']['type'] == 'Polygon':
+            coords = feature['geometry']['coordinates'][0]
+            latlon_list = [(c[1], c[0]) for c in coords]
+            polygon_area = compute_area_of_polygon(latlon_list)
 
-#st.line_chart(chart_data)
-st.line_chart(weather["GHI"])
+# Show chosen location
+st.write(f"Chosen Location: Latitude={lat}, Longitude={lon}, Altitude={alt}m")
+if polygon_area > 0:
+    st.write(f"Drawn Polygon Area: {polygon_area:.2f} m² (approx)")
 
-##map
-import numpy as np
-from matplotlib import cm
-import matplotlib.pyplot as plt
-import plotly.express as px
-import plotly.graph_objects as go
-from urllib.request import urlopen
-import json
-from copy import deepcopy
-from plotly.subplots import make_subplots
+# Fetch weather data
+try:
+    with st.spinner("Fetching weather data from NREL..."):
+        weather, metadata = get_psm3_data(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=ATTRIBUTES)
+except Exception as e:
+    st.error(f"Error fetching weather data: {e}")
+    st.stop()
 
+# System and module selection
+mod_db = pvlib.pvsystem.retrieve_sam('SandiaMod')
+inv_db = pvlib.pvsystem.retrieve_sam('SandiaInverter')
 
+module_list = mod_db.columns.tolist()
+inverter_list = inv_db.columns.tolist()
 
+# For simplicity, select default module and inverter or allow selection
+module_name = st.selectbox("Select Module", module_list, index=467)
+inverter_name = st.selectbox("Select Inverter", inverter_list, index=1337)
 
+module = mod_db[module_name].to_dict()
+inverter = inv_db[inverter_name].to_dict()
 
-
-
-
-
-## 3. Enter the following financial information:
-installed_cost=st.number_input('Insert the installed_cost in $ ',value=4328468.17 )  
-federal_tax_credit_percent=st.number_input('Insert the federal_tax_credit in % ',value=0 )
-federal_tax_credit=federal_tax_credit_percent/100*installed_cost  #(% of installed cost) 30
-state_tax_credit_percent=st.number_input('Insert the state_tax_credit in % ',value=0 )
-state_tax_credit=state_tax_credit_percent/100*installed_cost   #(% of installed cost) 10
-rebates_percent=st.number_input('Insert rebate in % ',value=0 )
-rebates= rebates_percent/100          #(itc OR Investment tax credit % of installed cost)
-
-interest_rate=st.number_input('Insert the interest in % ',value=4 )/100       #(annual percentage rate)
-project_life=st.number_input('Insert the project life in years ',value=25 )       #(years)
-annual_maintenance_costs= st.number_input('Insert the annual maintenace cost in $ ',value=15000 )         #($)
-years_to_inverter_replacement=st.number_input('Insert the years to replace inverters ',value=10 )   #(years)
-inverter_cost=st.number_input('Insert the inverter cost in $ ',value=10000 )           #($/kWac)
-salvage_value=(st.number_input('Insert the salvage value in % of installed cost ',value=5 )/100)*installed_cost          #(%)
-variable_operating_costs =st.number_input('Insert the variable operating cost in $/kWh ',value=0 )     #($/kWh) 0.1
-electricity_rate=st.number_input('Insert the electricity rate in $/kWh ',value=0.1 )  #$/kWh      # $/kWh    0r 100 in $/MWh retail rate or PPA price ($/kWh)
-term_of_loan=st.number_input('Insert the loan term in years ',value=25 )  # years
-amount_financed=st.number_input('Insert the amount financed in % ',value=100 )/100  ##(%)
-annual_payments=st.number_input('Insert the number of annual payment ',value=3 )  #(%) 
-discount_rate=interest_rate  
-year=project_life
-voc=variable_operating_costs   ##$/kWh
-foc=annual_maintenance_costs
-salvage_cost=salvage_value
-
-#st.write('installed_cost=',installed_cost)
-
-total_loss={'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'connections':0, 'lid':0, 'nameplate_rating':0, 'age':0, 'availability':0}
-
-#import st_aggrid
-#from st_aggrid import AgGrid
-#st.write('losses values in percentage')
-#lossdataframe = pd.DataFrame({'soiling': [2], 'shading':[0], 'snow':[0], 'mismatch':[2], 'wiring':[2], 'connections':[0], 'lid':[0], 'nameplate_rating':[0], 'age':[0], 'availability':[0]})
-#grid_return = AgGrid(lossdataframe, editable=True)
-#new_df = grid_return['data']
-
-
-#st.dataframe(new_df) 
-
-## mod selection
-mod=pvlib.pvsystem.retrieve_sam('SandiaMod')
-
-module=mod.SunPower_SPR_300_WHT__2007__E__.to_dict()
-clist = mod.T
-clist.reset_index(inplace=True)
-select_module = st.sidebar.selectbox("Select a module:",clist, index=467)
-st.write('module list', clist)
-
-select_module2=clist[clist['index'] == select_module]
-
-index_value=clist[clist['index'] == select_module].index.tolist()
-index_mod = np.asarray(index_value)
-index_mod=index_mod[0]
-st.write('index',index_mod)
-
-module=select_module2.T.to_dict()
-st.write('module',module)
-
-module=module[index_mod]
-
-
-
-# 6. Select an inverter from the SAM database
-
-invdb=pvlib.pvsystem.retrieve_sam('SandiaInverter')
- 
-inverter=invdb.Huawei_Technologies_Co___Ltd___SUN2000_33KTL_US__480V_.to_dict()
-clist = invdb.T
-clist.reset_index(inplace=True)
-select_inverter = st.sidebar.selectbox("Select a inverter:",clist, index=1337)
-st.write('inverter list', clist)
-
-select_inverter2=clist[clist['index'] == select_inverter]
-index_value=clist[clist['index'] == select_inverter].index.tolist()
-index_inv = np.asarray(index_value)
-index_inv=index_inv[0]
-st.write('index',index_inv)
-
-
-inverter=select_inverter2.T.to_dict()
-st.write('inverter',inverter)
-
-
-inverter=inverter[index_inv]
-
-
-
-
-max_string_design_voltage = inverter['Vdcmax']
-min_db_temp_ashrae=-3.7     #ASHRAE_Extreme_Annual_Mean_Minimum_Design_Dry_Bulb Temperature (Tmin)
-max_db_temp_ashrae= 36.6    #ASHRAE 2% Annual Design Dry Bulb Temperature (Tmax)#
-
+# String calculations (simplified from original)
+min_db_temp_ashrae = -3.7
+max_db_temp_ashrae = 36.6
 module['Bvoco%/C']=(module['Bvoco']/module['Voco'])*100
 module['Bvmpo%/C']=(module['Bvmpo']/module['Vmpo'])*100
 module['Aimpo%/C']=(module['Aimp']/module['Impo'])*100
 module['TPmpo%/C']=module['Bvmpo%/C']+module['Aimpo%/C']
-max_module_voc= module['Voco']*(1+((min_db_temp_ashrae-25)*module['Bvoco%/C']/100))  #Temperature corrected maximum module Voc
-max_module_series=int(max_string_design_voltage/max_module_voc) #maximum number of modules in series
-
-
-
+max_module_voc= module['Voco']*(1+((min_db_temp_ashrae-25)*module['Bvoco%/C']/100))
+max_string_design_voltage = inverter['Vdcmax']
+max_module_series=int(max_string_design_voltage/max_module_voc)
 dc_ac_ratio=inverter['Pdco']/inverter['Paco']
-inverter_STC_watts=inverter['Paco']*dc_ac_ratio
 single_module_power=module['Vmpo']*module['Impo']
-T_add= 25 # temp adder
-min_module_vmp= module['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module['TPmpo%/C']/100))  #Temperature corrected maximum module Voc
-min_module_series_ideal=math.ceil(inverter['Mppt_low']*1.2/min_module_vmp) #maximum number of modules in series
-min_module_series_okay=math.ceil(inverter['Mppt_low']*dc_ac_ratio/min_module_vmp) #maximum number of modules in series
-st.write('min_module_series_okay',min_module_series_okay)
+T_add=25
+min_module_vmp= module['Vmpo']*(1+((T_add+max_db_temp_ashrae-25)*module['TPmpo%/C']/100))
+min_module_series_okay=math.ceil(inverter['Mppt_low']*dc_ac_ratio/min_module_vmp)
 
-st.write('max_module_series',max_module_series)
-
-source_circuit_STC_power=[]
-parallel_string=[]
-circuit_dc_ac_ratio=[]
-diff_ratio=[]
-series_module=[]
-
-if max_module_series>=min_module_series_okay:
-            for i in range(min_module_series_okay,max_module_series+1,1):
-              #st.write(i)
-              source_circuit=single_module_power*i
-              max_string=int(inverter['Pdco']/source_circuit)
-              ratio=max_string*single_module_power*i/inverter['Paco']
-              diff_r=abs(dc_ac_ratio-ratio)
-              diff_ratio.append(diff_r)
-              circuit_dc_ac_ratio.append(ratio)
-              parallel_string.append(max_string)
-              source_circuit_STC_power.append(source_circuit)
-              series_module.append(i)
-            min_index_dc_ac_ratio = diff_ratio.index(min(diff_ratio))
-            st.write(min_index_dc_ac_ratio)
-            max_parallel_string=parallel_string[min_index_dc_ac_ratio]
-            no_of_series_module=series_module[min_index_dc_ac_ratio]
+if max_module_series<min_module_series_okay:
+    no_of_series_module=min_module_series_okay
 else:
-            i=min_module_series_okay
-            source_circuit=single_module_power*i
-            max_string=int(inverter['Pdco']/source_circuit)
-            ratio=max_string*single_module_power*i/inverter['Paco']
-            #diff_r=abs(dc_ac_ratio-ratio)
-            min_index_dc_ac_ratio = ratio
-            st.write(min_index_dc_ac_ratio)
-            max_parallel_string=max_string
-            no_of_series_module=min_module_series_okay 
-            if max_string==0:
-                      max_parallel_string=1  
+    # Choose series count that gives best DC/AC ratio
+    diff_ratio = []
+    series_module = []
+    for i in range(min_module_series_okay, max_module_series+1):
+        source_circuit=single_module_power*i
+        max_string=int(inverter['Pdco']/source_circuit)
+        ratio=max_string*single_module_power*i/inverter['Paco']
+        diff_r=abs(dc_ac_ratio-ratio)
+        diff_ratio.append(diff_r)
+        series_module.append((i, max_string))
 
+    idx = diff_ratio.index(min(diff_ratio))
+    no_of_series_module, max_parallel_string = series_module[idx]
 
+if 'max_parallel_string' not in locals():
+    # fallback if not defined
+    max_parallel_string = 1
 
-#st.write(source_circuit_STC_power)
-#st.write(parallel_string)
-#st.write(circuit_dc_ac_ratio)
-#st.write('max_parallel_string:',max_parallel_string)
-#st.write('no_of_series_module',no_of_series_module)
-
-st.write('max_parallel_string:',max_parallel_string)
-st.write('no_of_series_module',no_of_series_module)
-
-
-
-
-# b. Calculate number of inverters needed to meet annual energy production goal
-
-number_of_inverters_needed=math.ceil(system_size*1E6/inverter['Pdco'])
-st.write('number_of_inverters_needed:',number_of_inverters_needed)
-
-# 8. Calculate the total AC and DC system size, and DC/AC ratio
+number_of_inverters_needed=math.ceil(system_size_mw*1E6/inverter['Pdco'])
 total_AC_system_size=inverter['Paco']*number_of_inverters_needed
 total_DC_system_size=inverter['Pdco']*number_of_inverters_needed
-dc_ac_ratio=total_DC_system_size/total_AC_system_size
-st.write('dc_ac_ratio:',dc_ac_ratio)
+dc_ac_ratio = total_DC_system_size/total_AC_system_size
 
-
-
-##9. Enter the type of racking to be used (i.e. fixed tilt, single-axis tracking, etc.)
-#   a. Enter azimuth and tilt angle for array
-#   b. Enter Ground Coverage Ratio or distance between rows
-
-#a. Enter azimuth and tilt angle for array
 racking_parameters = {
     'racking_type': 'fixed_tilt',
-    'surface_tilt': 30,
-    'surface_azimuth': 180,
-    'albedo':0.2,
-    'gcr': 0.60 
+    'surface_tilt': surface_tilt,
+    'surface_azimuth': surface_azimuth,
+    'albedo':0.2
 }
 
-
-##10. Calculate the following performance information
-
-#a. Annual energy production
-
-#calculates the solar data (zenith,azimuth,eot,elevation,etc)
+# Solar position and effective irradiance
 sol_data = pvlib.solarposition.get_solarposition(time=weather.index,latitude=lat,longitude=lon,altitude=alt,temperature=weather['Temperature'])
 sol_data['dni_extra']=pvlib.irradiance.get_extra_radiation(weather.index)
-
-#we can confirm the tz is correctly localized by looking at the solar elevation values
-sol_data.head(5)
-#calculate environmental data (poa components, aoi, airmass)
-env_data = pvlib.irradiance.get_total_irradiance(surface_tilt=racking_parameters['surface_tilt'], surface_azimuth=racking_parameters['surface_azimuth'], 
+env_data = pvlib.irradiance.get_total_irradiance(surface_tilt=racking_parameters['surface_tilt'],
+                                                 surface_azimuth=racking_parameters['surface_azimuth'],
                                                  solar_zenith=sol_data['apparent_zenith'],
-                                                 solar_azimuth=sol_data['azimuth'], dni=weather['DNI'],ghi=weather['GHI'],
+                                                 solar_azimuth=sol_data['azimuth'], 
+                                                 dni=weather['DNI'], ghi=weather['GHI'],
                                                  dhi=weather['DHI'], dni_extra=sol_data['dni_extra'], model='haydavies')
-env_data['aoi'] = pvlib.irradiance.aoi(surface_tilt=racking_parameters['surface_tilt'], surface_azimuth=racking_parameters['surface_azimuth'], solar_zenith=sol_data['apparent_zenith'],
-                                       solar_azimuth=sol_data['azimuth'])
+env_data['aoi'] = pvlib.irradiance.aoi(racking_parameters['surface_tilt'], racking_parameters['surface_azimuth'], sol_data['apparent_zenith'], sol_data['azimuth'])
 env_data['airmass'] = pvlib.atmosphere.get_relative_airmass(zenith=sol_data['apparent_zenith'])
-env_data['am_abs'] = pvlib.atmosphere.get_absolute_airmass(airmass_relative=env_data['airmass'], pressure=(weather['Pressure']*100))
-env_data.head(5)
-#calculate the effective irradiance - needs module so that it can have fraction of diffuse irradiance used by the module
-weather['effective_irradiance'] = pvlib.pvsystem.sapm_effective_irradiance(poa_direct=env_data['poa_direct'],poa_diffuse=env_data['poa_diffuse'],
-                                                   airmass_absolute=env_data['am_abs'], aoi=env_data['aoi'], module=module)
+env_data['am_abs'] = pvlib.atmosphere.get_absolute_airmass(env_data['airmass'], pressure=(weather['Pressure']*100))
 
-tmp=(pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer'])
+weather['effective_irradiance'] = pvlib.pvsystem.sapm_effective_irradiance(poa_direct=env_data['poa_direct'],
+                                                                           poa_diffuse=env_data['poa_diffuse'],
+                                                                           airmass_absolute=env_data['am_abs'], 
+                                                                           aoi=env_data['aoi'], module=module)
+
+tmp=(TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer'])
 weather['cell_temperature'] = pvlib.temperature.sapm_cell(poa_global=env_data['poa_global'], temp_air=weather['Temperature'],
-                                                   wind_speed=weather['Wind Speed'], a=tmp['a'], b=tmp['b'], deltaT=tmp['deltaT'])
+                                                          wind_speed=weather['Wind Speed'], a=tmp['a'], b=tmp['b'], deltaT=tmp['deltaT'])
 
+location_obj = Location(lat, lon, 'Etc/GMT', alt)
+system_obj = PVSystem(arrays=None, surface_tilt=racking_parameters['surface_tilt'], surface_azimuth=racking_parameters['surface_azimuth'], 
+                      albedo=0.2, module_parameters=module, 
+                      temperature_model_parameters=tmp, modules_per_string=no_of_series_module, 
+                      strings_per_inverter=max_parallel_string, inverter_parameters=inverter, 
+                      racking_model='open_rack', losses_parameters=total_loss)
 
-weather['Solar Elevation'] = sol_data['apparent_elevation']
-weather.replace(0, np.nan, inplace=True)
-#weather.replace(np.nan,0, inplace=True)
-#day_weather = weather.loc[(weather['Solar Elevation'] > 0) & (weather['Solar Elevation'] < 90)] 
-
-
-
-temperature_model_parameters = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer']
-
-
-#https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.pvsystem.PVSystem.html#pvlib.pvsystem.PVSystem
-system=pvlib.pvsystem.PVSystem(arrays=None, surface_tilt=racking_parameters['surface_tilt'], surface_azimuth=racking_parameters['surface_azimuth'], 
-                        albedo=0.2, surface_type=None, module=None, 
-                        module_type=None, module_parameters=module, 
-                        temperature_model_parameters=temperature_model_parameters, modules_per_string=no_of_series_module, 
-                        strings_per_inverter=max_parallel_string, inverter=None, inverter_parameters=inverter, 
-                        racking_model='open_rack', losses_parameters=total_loss , name=None)
-
-
-
-#https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.modelchain.ModelChain.run_model_from_effective_irradiance.html#pvlib.modelchain.ModelChain.run_model_from_effective_irradiance
-mc = ModelChain(system, location,losses_model='pvwatts')
-#mc.run_model(weather)
+mc = ModelChain(system_obj, location_obj, losses_model='pvwatts')
 mc.run_model_from_effective_irradiance(weather)
-mc.results.aoi
-st.write('cell temperature in C', mc.results.cell_temperature)
-#mc.results.dc.to_dict()
-ac_result=mc.results.ac.to_dict()
-#ac_result.loc[ac_result<0]=0
-#ac_result.loc[ac_result<0]
-ac_result
-energy_production=(pd.DataFrame.from_dict(ac_result, orient='index', columns=['energy_production in kWh'])*number_of_inverters_needed)/1000  ##in kW
-energy_production.replace( np.nan, 0, inplace=True)
-energy_month=energy_production.resample('M').sum()*(3600/3600)   # kWh
-energy_month
-#annual_energy_production=energy_month.resample('Y').sum()*(1-final_loss/100)   # kWh
-annual_energy_production=energy_month.resample('Y').sum()  # MWh
-annual_energy_production
-st.write('annual_energy_production in kWh',annual_energy_production.to_numpy())
+ac_result=mc.results.ac.copy()
+ac_result[ac_result<0]=0
 
+energy_production_kW = (ac_result*number_of_inverters_needed)/1000
+annual_energy_production_kWh=energy_production_kW.resample('Y').sum().values[0]
 
-
-
-
-
-
-##b. Energy Yield
-dc_result=mc.results.dc.p_mp.to_dict()
-energy_production_dc=(pd.DataFrame.from_dict(dc_result, orient='index', columns=['energy_production_dc'])*number_of_inverters_needed)/1000 ##in kW
-energy_production_dc.replace( np.nan, 0, inplace=True)
-annual_energy_production_dc=energy_production_dc.resample('Y').sum()*(3600/3600)
-Energy_Yield=((annual_energy_production_dc.values)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed))*1000
-st.write('Energy_Yield in kWh/m2:',Energy_Yield)
-
-## c. Final Yield
-Final_Yield=((annual_energy_production.values)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed))*1000
-st.write('Final_Yield in kWh/m2:',Final_Yield)
-
-
-## d. Reference Yield
-poa_wh_m2=(env_data['poa_global']*(3600/3600))  ##wh/m2
-poa_sum=poa_wh_m2.resample('Y').sum().to_numpy()
-Reference_Yield=poa_sum/1000 ##kwh/m2
-st.write('Reference_Yield kWh/m2',Reference_Yield)
-#st.write('poa sum kWh/m2',poa_sum)
-
-## e. Performance Ratio
-Performance_Ratio=Final_Yield/Reference_Yield
-st.write('Performance_Ratio in %',Performance_Ratio*100)
-
-
-##f. Capacity Factor
-Capacity_Factor=((annual_energy_production.values)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed*8760))*1000
-st.write('Capacity Factor in %',Capacity_Factor*100)
-
-## g. System Efficiency
-System_Efficiency=((annual_energy_production.values)/(poa_sum*max_parallel_string*no_of_series_module*number_of_inverters_needed*module['Area']))*1000
-st.write('System_Efficiency in %',System_Efficiency*100)
-
-
-##11. Calculate the following financial information
-## a. Estimated installed cost (before credits and rebates)
-
-
-#st.write('installed_cost',installed_cost)
-# b. Total Capital Cost
-
+# Financial Calculations
+federal_tax_credit=federal_tax_credit_percent/100*installed_cost  
+state_tax_credit=state_tax_credit_percent/100*installed_cost
 Total_Capital_Cost=installed_cost-federal_tax_credit-state_tax_credit
 
-st.write('Total_Capital_Cost in $',Total_Capital_Cost)
-
-# c. Net annual savings
-
-
-
-
-energy_cost_first_year=annual_energy_production.values*electricity_rate
-RPWF=(1-((1+discount_rate)**(-year)))/discount_rate
-single_pwf=(1/((1+discount_rate)**year))
-Utility_energy_cost_LCC=energy_cost_first_year*RPWF
-
-st.write('Utility_energy_cost_LCC in $',Utility_energy_cost_LCC)
+RPWF=(1-((1+discount_rate)**(-project_life)))/discount_rate
+single_pwf=(1/((1+discount_rate)**project_life))
+Utility_energy_cost_LCC=(annual_energy_production_kWh*electricity_rate)*RPWF
 
 maintenance_value=annual_maintenance_costs*RPWF
-#st.write('maintenance_costs_value',maintenance_value)
-salvage_value=salvage_cost*single_pwf
-#st.write('salvage_value',salvage_value)
-
-
-PV_Life_cycle_cost=Total_Capital_Cost+maintenance_value-salvage_value
-st.write('PV_Life_cycle_cost in $',PV_Life_cycle_cost)
-
+salvage_val=salvage_value*single_pwf
+PV_Life_cycle_cost=Total_Capital_Cost+maintenance_value-salvage_val
 Net_LCC_cost=PV_Life_cycle_cost-Utility_energy_cost_LCC
-st.write('Net_LCC_cost in $',Net_LCC_cost)
 
+Simple_Payback_Period=Total_Capital_Cost/(annual_energy_production_kWh*electricity_rate)
 
-Net_annual_savings=energy_cost_first_year
-st.write('Net_annual_savings in $',Net_annual_savings)
-
-##e. LCOE
+# LCOE
 fixed_charge_rate=1/RPWF
+LCOE=(((Total_Capital_Cost*fixed_charge_rate)+annual_maintenance_costs)/annual_energy_production_kWh)+voc
 
+# KPI Metrics
+annual_savings, payback, capex = generate_kpi_metrics(annual_energy_production_kWh, electricity_rate, Total_Capital_Cost, Simple_Payback_Period)
 
-LCOE=(((Total_Capital_Cost*fixed_charge_rate)+foc)/annual_energy_production.values)+voc
-st.write('LCOE in $/kWh',LCOE)
-## d. Simple Payback Period
+# Display KPIs at top
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Annual Generation (kWh)", f"{annual_energy_production_kWh:,.0f}")
+col2.metric("Annual Savings", f"{annual_savings:,.0f} {currency}")
+col3.metric("Payback Period (yrs)", f"{payback:.2f}")
+col4.metric("LCOE ($/kWh)", f"{LCOE:.3f}")
 
-Simple_Payback_Period=Total_Capital_Cost/(annual_energy_production.values*electricity_rate)
-st.write('Simple_Payback_Period in years',Simple_Payback_Period)
+# Tabs for different analysis
+tab1, tab2, tab3, tab4 = st.tabs(["Location & Weather", "System Design", "Financials", "Performance Analysis"])
 
+with tab1:
+    st.subheader("Raw Weather Data")
+    if st.checkbox('Show raw weather data'):
+        st.dataframe(weather)
 
-#f. Net Present Value of Project
-#Net_Present_Value_of_Project=Total_Capital_Cost*single_pwf
-#st.write('Net_Present_Value_of_Project',Net_Present_Value_of_Project)
+    # Show monthly GHI
+    monthly_ghi = weather['GHI'].resample('M').sum()
+    ghi_chart = alt.Chart(monthly_ghi.reset_index()).mark_line(point=True).encode(
+        x='index:T', y='GHI:Q'
+    ).properties(title='Monthly GHI')
+    st.altair_chart(ghi_chart, use_container_width=True)
 
-## Python program explaining pv() function
-import numpy_financial as npf
+with tab2:
+    st.write(f"Number of modules in series: {no_of_series_module}")
+    st.write(f"Number of parallel strings per inverter: {max_parallel_string}")
+    st.write(f"Number of inverters needed: {number_of_inverters_needed}")
+    st.write(f"Total DC Size: {total_DC_system_size/1e6:.2f} MW")
+    st.write(f"Total AC Size: {total_AC_system_size/1e6:.2f} MW")
+    st.write(f"DC/AC Ratio: {dc_ac_ratio:.2f}")
 
-#            rate            values     
-a =  npf.npv(discount_rate,[-Total_Capital_Cost, annual_energy_production.values*electricity_rate,
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate, 
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate, 
-                           annual_energy_production.values*electricity_rate, 
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate, 
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate, 
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
-                           annual_energy_production.values*electricity_rate, annual_energy_production.values*electricity_rate,
-                           annual_energy_production.values*electricity_rate])
-st.write("Net Present Value(npv) in $: ", a)
+    if polygon_area > 0:
+        # Very rough estimate: assume a certain module area and packing density
+        # module['Area'] in m^2
+        module_area = module['Area']
+        # Assume a packing factor of 0.8 (just as an example)
+        packing_factor = 0.8
+        possible_modules = math.floor((polygon_area * packing_factor) / module_area)
+        st.write(f"Based on the drawn area, you could fit approximately {possible_modules} modules.")
 
+with tab3:
+    st.write("**Financial Summary**")
+    st.write(f"Total Capital Cost: {Total_Capital_Cost:,.0f} {currency}")
+    st.write(f"Utility Energy Cost LCC: {Utility_energy_cost_LCC:,.0f} {currency}")
+    st.write(f"PV Life Cycle Cost: {PV_Life_cycle_cost:,.0f} {currency}")
+    st.write(f"Net LCC Cost: {Net_LCC_cost:,.0f} {currency}")
+    st.write(f"Simple Payback Period: {Simple_Payback_Period:.2f} years")
+    st.write(f"LCOE: {LCOE:.3f} {currency}/kWh")
 
+    # Calculate NPV using npf.npv with a series of equal annual cash flows (approx)
+    annual_cashflow = annual_energy_production_kWh*electricity_rate
+    cash_flows = [-Total_Capital_Cost] + [annual_cashflow]*(project_life)
+    npv_val = npf.npv(discount_rate, cash_flows)
+    st.write(f"Net Present Value (NPV): {npv_val:,.0f} {currency}")
 
-#energy_month=energy_month.T
+with tab4:
+    # Monthly energy production chart
+    monthly_prod = (energy_production_kW.resample('M').sum())
+    monthly_chart = alt.Chart(monthly_prod.reset_index()).mark_bar().encode(
+        x=alt.X('index:T', title='Month'),
+        y=alt.Y('ac', title='Energy (kWh)'),
+    ).properties(title='Monthly Energy Production')
+    st.altair_chart(monthly_chart, use_container_width=True)
 
-st.subheader('monthly production')
-#hist_values1 = np.histogram(energy_month, bins=12, range=(0,12))
-st.bar_chart(energy_month,width=4)
+    # Performance Ratio, Yield calculations:
+    poa_wh_m2=(env_data['poa_global'])  ## W/m2 * 1h = Wh/m2
+    poa_sum=poa_wh_m2.resample('Y').sum().values[0]
+    Reference_Yield=poa_sum/1000
+    Final_Yield=(annual_energy_production_kWh/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed))*1000
+    Performance_Ratio=Final_Yield/Reference_Yield
+    Capacity_Factor=((annual_energy_production_kWh)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed*8760))*1000
 
+    st.write(f"Reference Yield (kWh/m²): {Reference_Yield:.2f}")
+    st.write(f"Final Yield (kWh/m²): {Final_Yield:.2f}")
+    st.write(f"Performance Ratio (%): {Performance_Ratio*100:.2f}")
+    st.write(f"Capacity Factor (%): {Capacity_Factor*100:.2f}")
 
-
-#st.subheader('Number of pickups by hour')
-#hist_values = np.histogram(data[DATE_COLUMN].dt.hour, bins=24, range=(0,24))[0]
-#st.bar_chart(hist_values)
-
-# Some number in the range 0-23
-#hour_to_filter = st.slider('hour', 0, 23, 17)
-#filtered_data = data[data[DATE_COLUMN].dt.hour == hour_to_filter]
-
-#st.subheader('Map of all pickups at %s:00' % hour_to_filter)
-#st.map(filtered_data)
+st.markdown("---")
+st.write("**Note:** This is a demonstration tool. For accurate results, use verified inputs and actual project details.")
