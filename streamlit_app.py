@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Enhanced Streamlit App for PV Techno-Economic Analysis
-Now with configurable temperature model selection:
- - Choose system type (ground, roof, floating, agrivoltaics)
- - Choose temperature model family (sapm, pvsyst, custom)
- - Choose from predefined models or input custom a, b, deltaT
+with fixed 'pressure' key, system type dropdown,
+improved sizing method display, and clarified temperature model selection.
 """
 
 import streamlit as st
@@ -28,7 +26,7 @@ from pyproj import Transformer
 
 st.set_page_config(page_title="PV Techno-Economic Analysis", layout='wide')
 
-# Pre-defined Temperature Models from pvlib
+# Pre-defined Temperature Models
 TEMPERATURE_MODEL_PARAMETERS = {
     'sapm': {
         'open_rack_glass_glass': {'a': -3.47, 'b': -0.0594, 'deltaT': 3},
@@ -43,7 +41,6 @@ TEMPERATURE_MODEL_PARAMETERS = {
 }
 
 currency_conversion = {"USD": 1, "BDT": 110}  # Approximate rate
-
 def_elec_rate_bd = 0.08
 def_elec_rate_us = 0.12
 def_elec_rate_global = 0.10
@@ -173,12 +170,9 @@ def get_default_electricity_rate(lat, lon):
         return def_elec_rate_us
     return def_elec_rate_global
 
-# ----------------------------------------------
-# Sidebar Inputs
-# ----------------------------------------------
+# Region selection
 st.sidebar.title("User Inputs")
-
-region = st.sidebar.radio("Select Region", ["Bangladesh", "USA"])
+region = st.sidebar.selectbox("Select Region", ["Bangladesh", "USA"])
 if region == "Bangladesh":
     default_lat = 23.8103
     default_lon = 90.4125
@@ -207,8 +201,8 @@ with st.sidebar.expander("Location and Weather Options"):
     email = st.text_input('Email for NREL API Key', 'atiqureee@gmail.com')
     NREL_API_KEY = st.text_input('NREL API Key', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
 
-# System type: ground, roof, floating, agrivoltaics
-system_type = st.sidebar.radio("System Type", ["Ground-mounted PV", "Roof-based PV", "Floating Solar", "Agrivoltaics"])
+# System type in a dropdown
+system_type = st.sidebar.selectbox("System Type", ["Ground-mounted PV", "Roof-based PV", "Floating Solar", "Agrivoltaics"])
 
 # Default model selection based on system_type
 if system_type == "Ground-mounted PV":
@@ -225,7 +219,7 @@ else:  # Agrivoltaics
     default_sapm_key = 'open_rack_glass_polymer'
 
 with st.sidebar.expander("System Configuration"):
-    sizing_method = st.radio("Sizing Method", ["Manual System Size", "Area-based System Size"])
+    # Initially just show the manual size
     manual_system_size_kw = st.number_input('System Size (kW DC)', value=5.0)
     packing_factor = st.number_input('Packing Factor (0-1)', value=0.8, min_value=0.0, max_value=1.0)
     mod_db = pvlib.pvsystem.retrieve_sam('SandiaMod')
@@ -236,11 +230,8 @@ with st.sidebar.expander("System Configuration"):
     inverter_name = st.selectbox("Select Inverter", inverter_list, index=1337)
 
 with st.sidebar.expander("Temperature Model"):
-    # Choose model family: sapm, pvsyst, custom
     model_family = st.selectbox("Model Family", ["sapm", "pvsyst", "custom"], index=0 if default_model_family == 'sapm' else 2)
-    
     if model_family == 'sapm':
-        # show sapm keys + custom
         sapm_keys = list(TEMPERATURE_MODEL_PARAMETERS['sapm'].keys())
         sapm_keys.append("Custom SAPM")
         selected_sapm_key = st.selectbox("SAPM Model", sapm_keys, index=sapm_keys.index(default_sapm_key) if default_sapm_key in sapm_keys else (len(sapm_keys)-1))
@@ -253,25 +244,19 @@ with st.sidebar.expander("Temperature Model"):
             temperature_model_parameters = TEMPERATURE_MODEL_PARAMETERS['sapm'][selected_sapm_key]
 
     elif model_family == 'pvsyst':
-        # pvsyst keys
         pvsyst_keys = list(TEMPERATURE_MODEL_PARAMETERS['pvsyst'].keys())
         pvsyst_keys.append("Custom PVSyst")
         selected_pvsyst_key = st.selectbox("PVSyst Model", pvsyst_keys)
         if selected_pvsyst_key == "Custom PVSyst":
             u_c = st.number_input('u_c', value=29.0)
             u_v = st.number_input('u_v', value=0.0)
-            # pvsyst model differs from sapm. We'll approximate a, b, deltaT for code compatibility:
-            # Actually pvsyst uses u_c and u_v in a different formula.
-            # For simplicity in code, we can store these separately and handle them later.
-            # We'll store them in a dictionary and handle them carefully in code.
             temperature_model_parameters = {'u_c': u_c, 'u_v': u_v, 'model': 'pvsyst'}
         else:
             parameters = TEMPERATURE_MODEL_PARAMETERS['pvsyst'][selected_pvsyst_key]
             temperature_model_parameters = {'u_c': parameters['u_c'], 'u_v': parameters['u_v'], 'model': 'pvsyst'}
 
     else:
-        # Custom model_family
-        # Let user input a,b,deltaT as in SAPM style
+        # custom model
         a = st.number_input('a', value=-3.56)
         b = st.number_input('b', value=-0.075)
         deltaT = st.number_input('deltaT', value=3)
@@ -322,7 +307,10 @@ if polygon_area > 0:
 
 try:
     with st.spinner("Fetching weather data from NREL..."):
-        weather, metadata = get_psm3_data(lat, lon, NREL_API_KEY, email, names="2019", interval=60)
+        # Removed 'surface_pressure' from attributes because it may not be supported in all endpoints
+        weather, metadata = get_psm3_data(lat, lon, NREL_API_KEY, email, names="2019", interval=60,
+                                          attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo',
+                                                      'pressure', 'wind_direction', 'wind_speed'))
 except Exception as e:
     st.error(f"Error fetching weather data: {e}")
     st.stop()
@@ -330,35 +318,35 @@ except Exception as e:
 module = mod_db[module_name].to_dict()
 inverter = inv_db[inverter_name].to_dict()
 
-if sizing_method == "Area-based System Size" and polygon_area > 0:
+# If area is drawn, compute area-based system size
+if polygon_area > 0:
     module_area = module['Area']
     possible_modules = math.floor((polygon_area * packing_factor) / module_area)
-    system_size_w = possible_modules * (module['Vmpo'] * module['Impo'])
-    system_size_kw = system_size_w/1000
+    system_size_w_area = possible_modules * (module['Vmpo'] * module['Impo'])
+    system_size_kw_area = system_size_w_area / 1000
+    # Let user choose final sizing method if area is available
+    sizing_method = st.radio("Select Final Sizing Method", ["Manual", "Area-based"], index=0)
+    if sizing_method == "Area-based":
+        system_size_kw = system_size_kw_area
+    else:
+        system_size_kw = manual_system_size_kw
+    st.write(f"Manual Size Input: {manual_system_size_kw:.2f} kW")
+    st.write(f"Area-based Size: {system_size_kw_area:.2f} kW (from {possible_modules} modules)")
 else:
+    # If no area, just use manual
     system_size_kw = manual_system_size_kw
+    st.write(f"No area drawn. Using manual system size: {system_size_kw:.2f} kW")
 
 system_size_mw = system_size_kw/1000
 
-# Check if using pvsyst or sapm or custom
-# If pvsyst, we need to convert to 'a','b','deltaT' equivalent or handle differently.
-# For simplicity, if pvsyst chosen, let's just approximate using a known formula:
-# PVsyst model: Tmodule = Tambient + (u_c + u_v * wind_speed)*Irradiance/800 (approx)
-# For now, we will just assume we can directly use the sapm_cell method if model = 'sapm' or 'custom'.
-# If 'pvsyst', we must implement a custom cell temp calculation. Let's do that now:
-
 def calculate_cell_temp_pvsyst(poa_global, temp_air, wind_speed, u_c, u_v):
-    # Approx: Tmodule = Tair + (poa_global/1000)*u_c + (poa_global/1000)*u_v*wind_speed
-    # Actually, PVsyst formula: Tmodule = Tair + (poa_global * (u_c + u_v*wind_speed)/800)
-    # We'll use this formula:
-    return temp_air + (poa_global*(u_c + u_v*wind_speed)/800)
+    # PVsyst formula: Tmod = Tair + (poa_global * (u_c + u_v * wind_speed)/800)
+    return temp_air + (poa_global * (u_c + u_v*wind_speed)/800)
 
 def get_cell_temperature(env_data, weather, params):
     if 'model' in params and params['model'] == 'pvsyst':
-        # pvsyst model
         return calculate_cell_temp_pvsyst(env_data['poa_global'], weather['temp_air'], weather['wind_speed'], params['u_c'], params['u_v'])
     else:
-        # assume SAPM/custom SAPM-like
         return pvlib.temperature.sapm_cell(poa_global=env_data['poa_global'],
                                            temp_air=weather['temp_air'],
                                            wind_speed=weather['wind_speed'],
@@ -419,10 +407,10 @@ env_data = pvlib.irradiance.get_total_irradiance(surface_tilt=surface_tilt,
                                                  dhi=weather['dhi'], dni_extra=sol_data['dni_extra'], model='haydavies')
 env_data['aoi'] = pvlib.irradiance.aoi(surface_tilt, surface_azimuth, sol_data['apparent_zenith'], sol_data['azimuth'])
 env_data['airmass'] = pvlib.atmosphere.get_relative_airmass(zenith=sol_data['apparent_zenith'])
-env_data['am_abs'] = pvlib.atmosphere.get_absolute_airmass(env_data['airmass'], pressure=(weather['surface_pressure']*100))
+# Use weather['pressure'] (correct variable) instead of surface_pressure
+env_data['am_abs'] = pvlib.atmosphere.get_absolute_airmass(env_data['airmass'], pressure=(weather['pressure']*100))
 
 weather['cell_temperature'] = get_cell_temperature(env_data, weather, temperature_model_parameters)
-
 weather['effective_irradiance'] = pvlib.pvsystem.sapm_effective_irradiance(
     poa_direct=env_data['poa_direct'],
     poa_diffuse=env_data['poa_diffuse'],
@@ -434,7 +422,6 @@ system_obj = pvlib.pvsystem.PVSystem(
     arrays=None, surface_tilt=surface_tilt, surface_azimuth=surface_azimuth, 
     albedo=0.2, module_parameters=module, 
     inverter_parameters=inverter,
-    # For losses model and others:
     racking_model='open_rack', losses_parameters=total_loss,
     modules_per_string=no_of_series_module, strings_per_inverter=max_parallel_string
 )
@@ -484,31 +471,21 @@ with tab1:
     st.altair_chart(ghi_chart, use_container_width=True)
 
 with tab2:
-    st.write(f"System Size: {system_size_kw:.2f} kW (DC)")
+    st.write(f"Final System Size Used: {system_size_kw:.2f} kW (DC)")
     st.write(f"Modules in series: {no_of_series_module}")
     st.write(f"Strings per inverter: {max_parallel_string}")
     st.write(f"Inverters needed: {number_of_inverters_needed}")
     st.write(f"Total DC Size: {total_DC_system_size/1e6:.2f} MW")
     st.write(f"Total AC Size: {total_AC_system_size/1e6:.2f} MW")
     st.write(f"DC/AC Ratio: {dc_ac_ratio:.2f}")
-    if polygon_area > 0 and sizing_method == "Area-based System Size":
+    if polygon_area > 0:
         st.write(f"Based on drawn area, approx. {possible_modules} modules fit.")
+        st.write(f"Area-based Size: {system_size_kw_area:.2f} kW")
+        st.write(f"Manual Input Size: {manual_system_size_kw:.2f} kW")
     st.write(f"System Type: {system_type}")
     st.write(f"Temperature Model Family: {model_family}")
-    if model_family == 'sapm':
-        if 'a' in temperature_model_parameters:
-            st.write(f"Using SAPM model parameters: a={temperature_model_parameters['a']}, b={temperature_model_parameters['b']}, deltaT={temperature_model_parameters['deltaT']}")
-        else:
-            # no a,b,deltaT if user selected a pre-defined key but didn't show them 
-            # They are in temperature_model_parameters anyway:
-            st.write("Using predefined SAPM parameters:")
-            st.write(temperature_model_parameters)
-    elif model_family == 'pvsyst':
-        st.write("Using PVSyst parameters:")
-        st.write(temperature_model_parameters)
-    else:
-        st.write("Using Custom model:")
-        st.write(temperature_model_parameters)
+    st.write("Selected Temperature Model Parameters:")
+    st.write(temperature_model_parameters)
 
 with tab3:
     st.write("**Financial Summary**")
