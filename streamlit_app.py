@@ -562,10 +562,14 @@ col3.metric("Payback (yrs)", f"{payback:.2f}")
 col4.metric("LCOE ($/kWh)", f"{LCOE:.3f}")
 col5.metric("CO2 Savings (tons/yr)", f"{co2_savings_tons:.2f}")
 
-page_options = ["Location & Weather", "System Design", "Financials", "Performance Analysis"]
-tab_option = st.sidebar.radio("View Sections:", page_options)
+#page_options = ["Location & Weather", "System Design", "Financials", "Performance Analysis"]
+#tab_option = st.sidebar.radio("View Sections:", page_options)
 
-if tab_option == "Location & Weather":
+tab1, tab2, tab3, tab4 = st.tabs(["Location & Weather", "System Design", "Financials", "Performance Analysis"])
+
+with tab1:
+
+    #if tab_option == "Location & Weather":
     st.subheader("Weather Data")
     if st.checkbox('Show raw weather data'):
         st.dataframe(weather)
@@ -577,47 +581,48 @@ if tab_option == "Location & Weather":
         tooltip=['index:T','ghi:Q']
     ).properties(title='Monthly GHI').interactive()
     st.altair_chart(ghi_chart, use_container_width=True)
-
-elif tab_option == "System Design":
+with tab2:
+    #elif tab_option == "System Design":
     st.subheader("System Design Details")
     st.markdown(f"""
-**Final System Size Used:** {system_size_kw:.2f} kW (DC)  
-
-- Modules in series: {no_of_series_module}  
-- Strings per inverter: {max_parallel_string}  
-- Inverters needed: {number_of_inverters_needed}  
-- Total DC Size: {total_DC_system_size/1e6:.2f} MW  
-- Total AC Size: {total_AC_system_size/1e6:.2f} MW  
-- DC/AC Ratio: {dc_ac_ratio:.2f}  
-
-**System Type:** {system_type}
-
-**Temperature Model Family:** {model_family}
-
-**Selected Temperature Model Parameters:**
-```json
-{temperature_model_parameters}
-
-""")
-elif tab_option == "Financials":
+    **Final System Size Used:** {system_size_kw:.2f} kW (DC)  
+    
+    - Modules in series: {no_of_series_module}  
+    - Strings per inverter: {max_parallel_string}  
+    - Inverters needed: {number_of_inverters_needed}  
+    - Total DC Size: {total_DC_system_size/1e6:.2f} MW  
+    - Total AC Size: {total_AC_system_size/1e6:.2f} MW  
+    - DC/AC Ratio: {dc_ac_ratio:.2f}  
+    
+    **System Type:** {system_type}
+    
+    **Temperature Model Family:** {model_family}
+    
+    **Selected Temperature Model Parameters:**
+    ```json
+    {temperature_model_parameters}
+    
+    """)
+with tab3:    
+    #elif tab_option == "Financials":
     st.subheader("Financial Summary")
     npv_val = npf.npv(interest_rate, [-Total_Capital_Cost] + [annual_energy_production_kWh*electricity_rate]*(project_life))
     st.markdown(f"""
-**Financial Summary**
-
-| Item                          | Value ({currency})       |
-|--------------------------------|--------------------------|
-| Total Capital Cost             | {Total_Capital_Cost:,.0f} |
-| Utility Energy Cost LCC        | {Utility_energy_cost_LCC:,.0f} |
-| PV Life Cycle Cost             | {PV_Life_cycle_cost:,.0f} |
-| Net LCC Cost                   | {Net_LCC_cost:,.0f} |
-| Simple Payback Period (years)  | {Simple_Payback_Period:.2f} |
-| LCOE ($/kWh)                   | {LCOE:.3f} |
-| NPV ({currency})               | {npv_val:,.0f} |
-
-""")
-
-elif tab_option == "Performance Analysis":
+    **Financial Summary**
+    
+    | Item                          | Value ({currency})       |
+    |--------------------------------|--------------------------|
+    | Total Capital Cost             | {Total_Capital_Cost:,.0f} |
+    | Utility Energy Cost LCC        | {Utility_energy_cost_LCC:,.0f} |
+    | PV Life Cycle Cost             | {PV_Life_cycle_cost:,.0f} |
+    | Net LCC Cost                   | {Net_LCC_cost:,.0f} |
+    | Simple Payback Period (years)  | {Simple_Payback_Period:.2f} |
+    | LCOE ($/kWh)                   | {LCOE:.3f} |
+    | NPV ({currency})               | {npv_val:,.0f} |
+    
+    """)
+with tab4:
+    #elif tab_option == "Performance Analysis":
     st.subheader("Performance Analysis")
     monthly_prod = (energy_production_kW.resample('M').sum())
     monthly_prod_df = monthly_prod.reset_index()
@@ -637,13 +642,13 @@ elif tab_option == "Performance Analysis":
     Capacity_Factor=((annual_energy_production_kWh)/(single_module_power*max_parallel_string*no_of_series_module*number_of_inverters_needed*8760))*1000
 
     st.markdown(f"""
-**Additional Performance Metrics**
-
-- Reference Yield (kWh/m²): {Reference_Yield:.2f}
-- Final Yield (kWh/m²): {Final_Yield:.2f}
-- Performance Ratio (%): {Performance_Ratio*100:.2f}
-- Capacity Factor (%): {Capacity_Factor*100:.2f}
-""")
+    **Additional Performance Metrics**
+    
+    - Reference Yield (kWh/m²): {Reference_Yield:.2f}
+    - Final Yield (kWh/m²): {Final_Yield:.2f}
+    - Performance Ratio (%): {Performance_Ratio*100:.2f}
+    - Capacity Factor (%): {Capacity_Factor*100:.2f}
+    """)
 
 st.markdown("---")
 st.write("**Note:** This is a demonstration tool. Adjust inputs and location as needed. Powered by pvlib Python.")
