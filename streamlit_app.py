@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Enhanced Streamlit App for PV Techno-Economic Analysis
+with Region Switching, Fixed Keys, and More Realistic Defaults
 """
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -24,62 +26,31 @@ from pyproj import Transformer
 st.set_page_config(page_title="PV Techno-Economic Analysis", layout='wide')
 
 # ----------------------------------------------
-# Default values and configuration
-# ----------------------------------------------
-default_lat = 23.8103   # Dhaka, Bangladesh
-default_lon = 90.4125
-default_alt = 13
-default_currency = "USD"
-currency_conversion = {"USD": 1, "BDT": 110}  # Approx conversion
-
-# Default region-based electricity rates (just examples)
-def_elec_rate_bd = 0.08  # USD/kWh approx for Bangladesh
-def_elec_rate_us = 0.12  # USD/kWh approx for US
-def_elec_rate_global = 0.10  # USD/kWh default if outside these regions
-
-# Temperature model sets (approximations)
+# Supported Temperature Models:
+# For roof-mounted scenarios, we can use close_mount_glass_polymer
 temp_models = {
     'Open Rack, Glass/Polymer': pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer'],
-    'Roof Mounted, Glass/Polymer': pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['roof_mount_glass_polymer'],
     'Open Rack, Glass/Glass': pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass'],
-    # For floating or agrivoltaic, no direct model in pvlib. We'll reuse an open rack model as placeholder.
-    'Floating PV (approx) ': pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer'],
+    'Close Mount (Roof) Glass/Polymer': pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['close_mount_glass_polymer'],
+    # For floating or agrivoltaic, not directly supported. Use open rack as approximation:
+    'Floating PV (approx)': pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer'],
     'Agrivoltaic (approx)': pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_polymer'],
 }
 
-# ----------------------------------------------
-# Helper functions
-# ----------------------------------------------
-NSRDB_API_BASE = "https://developer.nrel.gov"
-PSM_URL1 = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-download.csv"
-TMY_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-tmy-download.csv"
-PSM5MIN_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-5min-download.csv"
-MSG_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/msg-iodc-download.csv"
-HIMAWARI_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/himawari-download.csv"
+# Default currency conversion
+currency_conversion = {"USD": 1, "BDT": 110}  # Approximate rate
 
-ATTRIBUTES = (
-    'air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo',
-    'surface_pressure', 'wind_direction', 'wind_speed')
-
-VARIABLE_MAP = {
-    'GHI': 'ghi',
-    'DHI': 'dhi',
-    'DNI': 'dni',
-    'Clearsky GHI': 'ghi_clear',
-    'Clearsky DHI': 'dhi_clear',
-    'Clearsky DNI': 'dni_clear',
-    'Solar Zenith Angle': 'solar_zenith',
-    'Temperature': 'temp_air',
-    'Relative Humidity': 'relative_humidity',
-    'Dew point': 'temp_dew',
-    'Pressure': 'pressure',
-    'Wind Direction': 'wind_direction',
-    'Wind Speed': 'wind_speed',
-    'Surface Albedo': 'albedo',
-    'Precipitable Water': 'precipitable_water',
-}
+# Default electricity rates (USD/kWh)
+def_elec_rate_bd = 0.08  
+def_elec_rate_us = 0.12  
+def_elec_rate_global = 0.10  
 
 def get_psm_url(lon):
+    NSRDB_API_BASE = "https://developer.nrel.gov"
+    PSM_URL1 = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-download.csv"
+    MSG_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/msg-iodc-download.csv"
+    HIMAWARI_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/himawari-download.csv"
+
     if -16 < lon < 91:
         return MSG_URL
     elif 91 <= lon < 182:
@@ -113,6 +84,23 @@ def parse_psm3(fbuf, map_variables=False):
     data.index = pd.DatetimeIndex(dtidx).tz_localize(tz)
 
     if map_variables:
+        VARIABLE_MAP = {
+            'GHI': 'ghi',
+            'DHI': 'dhi',
+            'DNI': 'dni',
+            'Clearsky GHI': 'ghi_clear',
+            'Clearsky DHI': 'dhi_clear',
+            'Clearsky DNI': 'dni_clear',
+            'Solar Zenith Angle': 'solar_zenith',
+            'Temperature': 'temp_air',
+            'Relative Humidity': 'relative_humidity',
+            'Dew point': 'temp_dew',
+            'Pressure': 'pressure',
+            'Wind Direction': 'wind_direction',
+            'Wind Speed': 'wind_speed',
+            'Surface Albedo': 'albedo',
+            'Precipitable Water': 'precipitable_water',
+        }
         data = data.rename(columns=VARIABLE_MAP)
         metadata['latitude'] = metadata.pop('Latitude')
         metadata['longitude'] = metadata.pop('Longitude')
@@ -121,7 +109,9 @@ def parse_psm3(fbuf, map_variables=False):
     return data, metadata
 
 def get_psm3_data(latitude, longitude, api_key, email, names='tmy', interval=60,
-                  attributes=ATTRIBUTES, leap_day=False, full_name='pvlib python',
+                  attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo',
+                              'surface_pressure', 'wind_direction', 'wind_speed'),
+                  leap_day=False, full_name='pvlib python',
                   affiliation='pvlib python', timeout=30):
     longitude_str = ('%9.4f' % longitude).strip()
     latitude_str = ('%8.4f' % latitude).strip()
@@ -141,9 +131,9 @@ def get_psm3_data(latitude, longitude, api_key, email, names='tmy', interval=60,
     }
 
     if any(prefix in names for prefix in ('tmy', 'tgy', 'tdy')):
-        URL = TMY_URL
+        URL = "https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-tmy-download.csv"
     elif interval in (5,15):
-        URL = PSM5MIN_URL
+        URL = "https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-5min-download.csv"
     else:
         URL = get_psm_url(float(longitude))
 
@@ -162,22 +152,20 @@ def get_psm3_data(latitude, longitude, api_key, email, names='tmy', interval=60,
 def compute_area_of_polygon(latlon_list):
     if len(latlon_list) < 3:
         return 0
-    # Transform to a projected coordinate system (Web Mercator EPSG:3857) for area calculation
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
     coords_3857 = [transformer.transform(pt[1], pt[0]) for pt in latlon_list]
     polygon_3857 = Polygon(coords_3857)
-    return polygon_3857.area  # area in m²
+    return polygon_3857.area
 
 def generate_kpi_metrics(annual_energy_kwh, electricity_rate, total_capital_cost, simple_payback):
     total_annual_savings = annual_energy_kwh * electricity_rate
     return total_annual_savings, simple_payback, total_capital_cost
 
 def get_default_electricity_rate(lat, lon):
-    # Simple bounding box checks
-    # Bangladesh approx lat range: 20.7 to 26.6, lon range: 88.0 to 92.7
+    # Bangladesh approx lat: 20.7 to 26.6, lon: 88.0 to 92.7
     if 20.7 <= lat <= 26.6 and 88.0 <= lon <= 92.7:
         return def_elec_rate_bd
-    # USA approximate bounding box: lat 24.5 to 49.3, lon -124.8 to -66.9
+    # USA approx lat:24.5 to 49.3, lon:-124.8 to -66.9
     if 24.5 <= lat <= 49.3 and -124.8 <= lon <= -66.9:
         return def_elec_rate_us
     return def_elec_rate_global
@@ -187,27 +175,45 @@ def get_default_electricity_rate(lat, lon):
 # ----------------------------------------------
 st.sidebar.title("User Inputs")
 
-currency = st.sidebar.selectbox("Select Currency:", ["USD", "BDT"])
+# Region Selection
+region = st.sidebar.radio("Select Region", ["Bangladesh", "USA"])
+if region == "Bangladesh":
+    default_lat = 23.8103
+    default_lon = 90.4125
+    default_currency = "BDT"
+    # Assume small rooftop: 5 kW system at $1500/kW = $7,500 => in BDT approx 7,500*110=825,000 BDT
+    default_installed_cost_usd = 7500.0
+    default_elec_rate = def_elec_rate_bd
+    lat = default_lat
+    lon = default_lon
+    currency = default_currency
+elif region == "USA":
+    default_lat = 30.2672
+    default_lon = -97.7431
+    default_currency = "USD"
+    # USA: 5 kW at $1200/kW = $6,000
+    default_installed_cost_usd = 6000.0
+    default_elec_rate = def_elec_rate_us
+    lat = default_lat
+    lon = default_lon
+    currency = default_currency
+
 cur_factor = currency_conversion[currency]
 
 with st.sidebar.expander("Location and Weather Options"):
-    st.write("You can pick location from the map or specify here:")
-    lat = st.number_input('Latitude', value=default_lat, format="%.6f")
-    lon = st.number_input('Longitude', value=default_lon, format="%.6f")
-    alt = st.number_input('Altitude (m)', value=default_alt)
-    # Default from previous code
+    # User can still override lat/lon
+    lat = st.number_input('Latitude', value=lat, format="%.6f")
+    lon = st.number_input('Longitude', value=lon, format="%.6f")
+    alt = st.number_input('Altitude (m)', value=10)
     email = st.text_input('Email for NREL API Key', 'atiqureee@gmail.com')
     NREL_API_KEY = st.text_input('NREL API Key', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
 
 with st.sidebar.expander("System Configuration"):
-    # System type selection affects temperature parameters
     system_type = st.selectbox("System Type", list(temp_models.keys()))
-    # If no area chosen, user can input system size. If area chosen, can use area-based sizing
+    # Sizing method
     sizing_method = st.radio("Sizing Method", ["Manual System Size", "Area-based System Size"])
     manual_system_size_kw = st.number_input('System Size (kW DC)', value=5.0)
-    # Parameters for area-based calculation
-    packing_factor = st.number_input('Packing Factor (0-1)', value=0.8, min_value=0.0, max_value=1.0)
-    # Module/Inverter selection
+    packing_factor = st.number_input('Packing Factor (0-1, area utilization)', value=0.8, min_value=0.0, max_value=1.0)
     mod_db = pvlib.pvsystem.retrieve_sam('SandiaMod')
     inv_db = pvlib.pvsystem.retrieve_sam('SandiaInverter')
     module_list = mod_db.columns.tolist()
@@ -216,22 +222,24 @@ with st.sidebar.expander("System Configuration"):
     inverter_name = st.selectbox("Select Inverter", inverter_list, index=1337)
 
 with st.sidebar.expander("Financial Inputs"):
-    installed_cost = st.number_input('Installed Cost', value=4328468.17)*cur_factor
+    # Convert default cost to local currency
+    installed_cost = st.number_input('Installed Cost', value=default_installed_cost_usd)*cur_factor
     federal_tax_credit_percent = st.number_input('Federal Tax Credit (%)', value=0.0)
     state_tax_credit_percent = st.number_input('State Tax Credit (%)', value=0.0)
     rebates_percent = st.number_input('Rebate (%)', value=0.0)
-    interest_rate = st.number_input('Interest Rate (%)', value=4.0)/100
+    interest_rate = st.number_input('Discount/Interest Rate (%)', value=4.0)/100
     project_life = st.number_input('Project Life (years)', value=25)
-    annual_maintenance_costs = st.number_input('Annual Maintenance ($)', value=15000.0)*cur_factor
+    annual_maintenance_costs = st.number_input('Annual Maintenance ($)', value=100.0)*cur_factor
+    # Inverter replacement cost - for small system, say after 10 years partial cost:
     years_to_inverter_replacement = st.number_input('Years to Inverter Replacement', value=10)
-    inverter_cost = st.number_input('Inverter Cost ($)', value=10000.0)*cur_factor
+    inverter_cost = st.number_input('Inverter Cost ($)', value=500.0)*cur_factor
     salvage_percent = st.number_input('Salvage Value (%) of installed cost', value=5.0)
     salvage_value = salvage_percent/100 * installed_cost
     voc = st.number_input('Variable Operating Cost ($/kWh)', value=0.0)*cur_factor
 
 with st.sidebar.expander("Electricity Rate"):
-    default_elec_rate = get_default_electricity_rate(lat, lon)*cur_factor
-    electricity_rate = st.number_input('Electricity Rate ($/kWh)', value=default_elec_rate)
+    adjusted_default_rate = get_default_electricity_rate(lat, lon)*cur_factor
+    electricity_rate = st.number_input('Electricity Rate ($/kWh)', value=adjusted_default_rate)
 
 # ----------------------------------------------
 # Main Layout
@@ -239,7 +247,7 @@ with st.sidebar.expander("Electricity Rate"):
 st.title("PV Techno-Economic Analysis Dashboard")
 
 # Map for selecting location and area
-st.subheader("Select Location and Draw Area")
+st.subheader("Select Location and Draw Area on Map")
 m = folium.Map(location=[lat, lon], zoom_start=6, tiles=None)
 folium.TileLayer('Esri.WorldImagery', name='Satellite', attr="Esri").add_to(m)
 Draw(export=True, filename="data.json").add_to(m)
@@ -250,8 +258,9 @@ if 'last_clicked' in map_data and map_data['last_clicked'] is not None:
     lat = map_data['last_clicked']['lat']
     lon = map_data['last_clicked']['lng']
 
-# Get polygon for area
+# Get polygon area
 polygon_area = 0
+possible_modules = 0
 if 'all_drawings' in map_data and map_data['all_drawings'] is not None:
     for feature in map_data['all_drawings']:
         if feature['geometry']['type'] == 'Polygon':
@@ -259,13 +268,14 @@ if 'all_drawings' in map_data and map_data['all_drawings'] is not None:
             latlon_list = [(c[1], c[0]) for c in coords]
             polygon_area = compute_area_of_polygon(latlon_list)
 
-st.write(f"Chosen Location: Latitude={lat:.6f}, Longitude={lon:.6f}, Altitude={alt}m")
+st.write(f"Chosen Location: Latitude={lat:.6f}, Longitude={lon:.6f}, Altitude={alt} m")
 if polygon_area > 0:
     st.write(f"Drawn Polygon Area: {polygon_area:.2f} m²")
 
+# Fetch weather
 try:
     with st.spinner("Fetching weather data from NREL..."):
-        weather, metadata = get_psm3_data(lat, lon, NREL_API_KEY, email, names="2019", interval=60, attributes=ATTRIBUTES)
+        weather, metadata = get_psm3_data(lat, lon, NREL_API_KEY, email, names="2019", interval=60)
 except Exception as e:
     st.error(f"Error fetching weather data: {e}")
     st.stop()
@@ -273,22 +283,20 @@ except Exception as e:
 module = mod_db[module_name].to_dict()
 inverter = inv_db[inverter_name].to_dict()
 
-# If area-based sizing chosen and polygon_area > 0, compute number of modules and system size
 if sizing_method == "Area-based System Size" and polygon_area > 0:
-    # Compute how many modules fit
     module_area = module['Area']
     possible_modules = math.floor((polygon_area * packing_factor) / module_area)
-    # System size in W = possible_modules * module STC power (module['Vmpo']*module['Impo'])
     system_size_w = possible_modules * (module['Vmpo'] * module['Impo'])
     system_size_kw = system_size_w/1000
 else:
-    # Use manual system size
     system_size_kw = manual_system_size_kw
 
-# Adjust system size in MW for calculation
 system_size_mw = system_size_kw/1000
 
-# Calculate number of inverters, etc. based on system size
+# Temperature model
+temperature_model_parameters = temp_models[system_type]
+
+# System electrical calculations
 min_db_temp_ashrae = -3.7
 max_db_temp_ashrae = 36.6
 module['Bvoco%/C']=(module['Bvoco']/module['Voco'])*100
@@ -327,14 +335,10 @@ total_AC_system_size=inverter['Paco']*number_of_inverters_needed
 total_DC_system_size=inverter['Pdco']*number_of_inverters_needed
 dc_ac_ratio = total_DC_system_size/total_AC_system_size
 
-# Choose temperature model based on system type
-temperature_model_parameters = temp_models[system_type]
-
-# Racking parameters (assume fixed tilt for now)
+location_obj = location.Location(lat, lon, 'Etc/GMT', alt)
 surface_tilt = 30
 surface_azimuth = 180
 total_loss = {'soiling':2, 'shading':0, 'snow':0, 'mismatch':2, 'wiring':2, 'connections':0, 'lid':0, 'nameplate_rating':0, 'age':0, 'availability':0}
-location_obj = location.Location(lat, lon, 'Etc/GMT', alt)
 
 sol_data = pvlib.solarposition.get_solarposition(time=weather.index,latitude=lat,longitude=lon,altitude=alt,temperature=weather['Temperature'])
 sol_data['dni_extra']=pvlib.irradiance.get_extra_radiation(weather.index)
@@ -342,19 +346,19 @@ env_data = pvlib.irradiance.get_total_irradiance(surface_tilt=surface_tilt,
                                                  surface_azimuth=surface_azimuth,
                                                  solar_zenith=sol_data['apparent_zenith'],
                                                  solar_azimuth=sol_data['azimuth'], 
-                                                 dni=weather['DNI'], ghi=weather['GHI'],
-                                                 dhi=weather['DHI'], dni_extra=sol_data['dni_extra'], model='haydavies')
+                                                 dni=weather['dni'], ghi=weather['ghi'],
+                                                 dhi=weather['dhi'], dni_extra=sol_data['dni_extra'], model='haydavies')
 env_data['aoi'] = pvlib.irradiance.aoi(surface_tilt, surface_azimuth, sol_data['apparent_zenith'], sol_data['azimuth'])
 env_data['airmass'] = pvlib.atmosphere.get_relative_airmass(zenith=sol_data['apparent_zenith'])
-env_data['am_abs'] = pvlib.atmosphere.get_absolute_airmass(env_data['airmass'], pressure=(weather['Pressure']*100))
+env_data['am_abs'] = pvlib.atmosphere.get_absolute_airmass(env_data['airmass'], pressure=(weather['surface_pressure']*100))
 
 weather['effective_irradiance'] = pvlib.pvsystem.sapm_effective_irradiance(poa_direct=env_data['poa_direct'],
                                                                            poa_diffuse=env_data['poa_diffuse'],
                                                                            airmass_absolute=env_data['am_abs'], 
                                                                            aoi=env_data['aoi'], module=module)
 
-weather['cell_temperature'] = pvlib.temperature.sapm_cell(poa_global=env_data['poa_global'], temp_air=weather['Temperature'],
-                                                          wind_speed=weather['Wind Speed'], a=temperature_model_parameters['a'], 
+weather['cell_temperature'] = pvlib.temperature.sapm_cell(poa_global=env_data['poa_global'], temp_air=weather['temp_air'],
+                                                          wind_speed=weather['wind_speed'], a=temperature_model_parameters['a'], 
                                                           b=temperature_model_parameters['b'], 
                                                           deltaT=temperature_model_parameters['deltaT'])
 
@@ -372,6 +376,7 @@ ac_result[ac_result<0]=0
 energy_production_kW = (ac_result*number_of_inverters_needed)/1000
 annual_energy_production_kWh=energy_production_kW.resample('Y').sum().values[0]
 
+# Financial calculations
 federal_tax_credit=federal_tax_credit_percent/100*installed_cost  
 state_tax_credit=state_tax_credit_percent/100*installed_cost
 Total_Capital_Cost=installed_cost-federal_tax_credit-state_tax_credit
@@ -397,16 +402,16 @@ col2.metric("Annual Savings", f"{annual_savings:,.0f} {currency}")
 col3.metric("Payback Period (yrs)", f"{payback:.2f}")
 col4.metric("LCOE ($/kWh)", f"{LCOE:.3f}")
 
-# Tabs for different analysis
+# Tabs
 tab1, tab2, tab3, tab4 = st.tabs(["Location & Weather", "System Design", "Financials", "Performance Analysis"])
 
 with tab1:
     st.subheader("Weather Data")
     if st.checkbox('Show raw weather data'):
         st.dataframe(weather)
-    monthly_ghi = weather['GHI'].resample('M').sum()
+    monthly_ghi = weather['ghi'].resample('M').sum()
     ghi_chart = alt.Chart(monthly_ghi.reset_index()).mark_line(point=True).encode(
-        x='index:T', y='GHI:Q'
+        x='index:T', y='ghi:Q'
     ).properties(title='Monthly GHI')
     st.altair_chart(ghi_chart, use_container_width=True)
 
@@ -430,14 +435,12 @@ with tab3:
     st.write(f"Net LCC Cost: {Net_LCC_cost:,.0f} {currency}")
     st.write(f"Simple Payback Period: {Simple_Payback_Period:.2f} years")
     st.write(f"LCOE: {LCOE:.3f} {currency}/kWh")
-    # NPV calculation
     annual_cashflow = annual_energy_production_kWh*electricity_rate
     cash_flows = [-Total_Capital_Cost] + [annual_cashflow]*(project_life)
     npv_val = npf.npv(interest_rate, cash_flows)
     st.write(f"Net Present Value (NPV): {npv_val:,.0f} {currency}")
 
 with tab4:
-    # Monthly energy production chart
     monthly_prod = (energy_production_kW.resample('M').sum())
     monthly_chart = alt.Chart(monthly_prod.reset_index()).mark_bar().encode(
         x=alt.X('index:T', title='Month'),
@@ -458,4 +461,4 @@ with tab4:
     st.write(f"Capacity Factor (%): {Capacity_Factor*100:.2f}")
 
 st.markdown("---")
-st.write("**Note:** This is a demonstration tool. Modify inputs for accurate results.")
+st.write("**Note:** This is a demonstration tool. Adjust inputs as needed for accurate and region-specific analysis. Powered by pvlib Python.")
