@@ -9,3 +9,5 @@ json5
 streamlit-folium
 folium
 altair
+shapely
+pyproj
