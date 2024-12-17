@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 Enhanced Streamlit App for PV Techno-Economic Analysis
-with fixed 'pressure' key, system type dropdown,
-improved sizing method display, and clarified temperature model selection.
+with styling, correct array definition, and altair plotting fixes.
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import pvlib
-from pvlib import location
+from pvlib import location, pvsystem, modelchain
 from pvlib import irradiance
 import math
 import requests
@@ -17,7 +16,7 @@ import io
 from json import JSONDecodeError
 import warnings
 import numpy_financial as npf
-import altair as alt
+import altair as altair_plot
 import folium
 from folium.plugins import Draw
 from streamlit_folium import st_folium
@@ -26,7 +25,18 @@ from pyproj import Transformer
 
 st.set_page_config(page_title="PV Techno-Economic Analysis", layout='wide')
 
-# Pre-defined Temperature Models
+# Styling
+st.markdown("""
+    <style>
+    .stMetric {
+        background-color: #f0f2f6;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 TEMPERATURE_MODEL_PARAMETERS = {
     'sapm': {
         'open_rack_glass_glass': {'a': -3.47, 'b': -0.0594, 'deltaT': 3},
@@ -40,7 +50,7 @@ TEMPERATURE_MODEL_PARAMETERS = {
     }
 }
 
-currency_conversion = {"USD": 1, "BDT": 110}  # Approximate rate
+currency_conversion = {"USD": 1, "BDT": 110} 
 def_elec_rate_bd = 0.08
 def_elec_rate_us = 0.12
 def_elec_rate_global = 0.10
@@ -50,7 +60,6 @@ def get_psm_url(lon):
     PSM_URL1 = NSRDB_API_BASE + "/api/nsrdb/v2/solar/psm3-download.csv"
     MSG_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/msg-iodc-download.csv"
     HIMAWARI_URL = NSRDB_API_BASE + "/api/nsrdb/v2/solar/himawari-download.csv"
-
     if -16 < lon < 91:
         return MSG_URL
     elif 91 <= lon < 182:
@@ -100,17 +109,18 @@ def parse_psm3(fbuf, map_variables=False):
             'Wind Speed': 'wind_speed',
             'Surface Albedo': 'albedo',
             'Precipitable Water': 'precipitable_water',
+            'Surface Pressure': 'surface_pressure'
         }
-        data = data.rename(columns=VARIABLE_MAP)
+        rename_map = {k: v for k, v in VARIABLE_MAP.items() if k in data.columns}
+        data = data.rename(columns=rename_map)
         metadata['latitude'] = metadata.pop('Latitude')
         metadata['longitude'] = metadata.pop('Longitude')
         metadata['altitude'] = metadata.pop('Elevation')
-
     return data, metadata
 
 def get_psm3_data(latitude, longitude, api_key, email, names='tmy', interval=60,
-                  attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo',
-                              'surface_pressure', 'wind_direction', 'wind_speed'),
+                  attributes=('air_temperature','dew_point','dhi','dni','ghi',
+                              'surface_albedo','surface_pressure','wind_direction','wind_speed'),
                   leap_day=False, full_name='pvlib python',
                   affiliation='pvlib python', timeout=30):
     longitude_str = ('%9.4f' % longitude).strip()
@@ -162,16 +172,14 @@ def generate_kpi_metrics(annual_energy_kwh, electricity_rate, total_capital_cost
     return total_annual_savings, simple_payback, total_capital_cost
 
 def get_default_electricity_rate(lat, lon):
-    # Bangladesh approx lat:20.7 to 26.6, lon:88.0 to 92.7
     if 20.7 <= lat <= 26.6 and 88.0 <= lon <= 92.7:
         return def_elec_rate_bd
-    # USA approx lat:24.5 to 49.3, lon:-124.8 to -66.9
     if 24.5 <= lat <= 49.3 and -124.8 <= lon <= -66.9:
         return def_elec_rate_us
     return def_elec_rate_global
 
-# Region selection
 st.sidebar.title("User Inputs")
+
 region = st.sidebar.selectbox("Select Region", ["Bangladesh", "USA"])
 if region == "Bangladesh":
     default_lat = 23.8103
@@ -194,17 +202,15 @@ else:
 
 cur_factor = currency_conversion[currency]
 
-with st.sidebar.expander("Location and Weather Options"):
+with st.sidebar.expander("Location and Weather Options", expanded=True):
     lat = st.number_input('Latitude', value=lat, format="%.6f")
     lon = st.number_input('Longitude', value=lon, format="%.6f")
     alt = st.number_input('Altitude (m)', value=10)
     email = st.text_input('Email for NREL API Key', 'atiqureee@gmail.com')
     NREL_API_KEY = st.text_input('NREL API Key', 'qguVH9fdgUOyRo1jo6zzOUXkS6a96vY1ct45RpuK')
 
-# System type in a dropdown
 system_type = st.sidebar.selectbox("System Type", ["Ground-mounted PV", "Roof-based PV", "Floating Solar", "Agrivoltaics"])
 
-# Default model selection based on system_type
 if system_type == "Ground-mounted PV":
     default_model_family = 'sapm'
     default_sapm_key = 'open_rack_glass_polymer'
@@ -214,27 +220,30 @@ elif system_type == "Roof-based PV":
 elif system_type == "Floating Solar":
     default_model_family = 'sapm'
     default_sapm_key = 'open_rack_glass_polymer'
-else:  # Agrivoltaics
+else:
     default_model_family = 'sapm'
     default_sapm_key = 'open_rack_glass_polymer'
 
-with st.sidebar.expander("System Configuration"):
-    # Initially just show the manual size
+with st.sidebar.expander("System Configuration", expanded=True):
     manual_system_size_kw = st.number_input('System Size (kW DC)', value=5.0)
     packing_factor = st.number_input('Packing Factor (0-1)', value=0.8, min_value=0.0, max_value=1.0)
-    mod_db = pvlib.pvsystem.retrieve_sam('SandiaMod')
-    inv_db = pvlib.pvsystem.retrieve_sam('SandiaInverter')
+    mod_db = pvsystem.retrieve_sam('SandiaMod')
+    inv_db = pvsystem.retrieve_sam('SandiaInverter')
     module_list = mod_db.columns.tolist()
     inverter_list = inv_db.columns.tolist()
     module_name = st.selectbox("Select Module", module_list, index=467)
     inverter_name = st.selectbox("Select Inverter", inverter_list, index=1337)
 
-with st.sidebar.expander("Temperature Model"):
+    st.subheader("Temperature Model")
     model_family = st.selectbox("Model Family", ["sapm", "pvsyst", "custom"], index=0 if default_model_family == 'sapm' else 2)
     if model_family == 'sapm':
         sapm_keys = list(TEMPERATURE_MODEL_PARAMETERS['sapm'].keys())
         sapm_keys.append("Custom SAPM")
-        selected_sapm_key = st.selectbox("SAPM Model", sapm_keys, index=sapm_keys.index(default_sapm_key) if default_sapm_key in sapm_keys else (len(sapm_keys)-1))
+        if default_sapm_key in sapm_keys:
+            sapm_index = sapm_keys.index(default_sapm_key)
+        else:
+            sapm_index = len(sapm_keys)-1
+        selected_sapm_key = st.selectbox("SAPM Model", sapm_keys, index=sapm_index)
         if selected_sapm_key == "Custom SAPM":
             a = st.number_input('a', value=-3.56)
             b = st.number_input('b', value=-0.075)
@@ -256,13 +265,16 @@ with st.sidebar.expander("Temperature Model"):
             temperature_model_parameters = {'u_c': parameters['u_c'], 'u_v': parameters['u_v'], 'model': 'pvsyst'}
 
     else:
-        # custom model
         a = st.number_input('a', value=-3.56)
         b = st.number_input('b', value=-0.075)
         deltaT = st.number_input('deltaT', value=3)
         temperature_model_parameters = {'a': a, 'b': b, 'deltaT': deltaT, 'model': 'custom'}
 
-with st.sidebar.expander("Financial Inputs"):
+with st.sidebar.expander("Area-Based Sizing (Optional)", expanded=True):
+    # Will display after polygon is drawn in main section
+    pass
+
+with st.sidebar.expander("Financial Inputs", expanded=True):
     installed_cost = st.number_input('Installed Cost', value=default_installed_cost_usd)*cur_factor
     federal_tax_credit_percent = st.number_input('Federal Tax Credit (%)', value=0.0)
     state_tax_credit_percent = st.number_input('State Tax Credit (%)', value=0.0)
@@ -276,16 +288,18 @@ with st.sidebar.expander("Financial Inputs"):
     salvage_value = salvage_percent/100 * installed_cost
     voc = st.number_input('Variable Operating Cost ($/kWh)', value=0.0)*cur_factor
 
-with st.sidebar.expander("Electricity Rate"):
+with st.sidebar.expander("Electricity Rate", expanded=True):
     adjusted_default_rate = get_default_electricity_rate(lat, lon)*cur_factor
     electricity_rate = st.number_input('Electricity Rate ($/kWh)', value=adjusted_default_rate)
 
 st.title("PV Techno-Economic Analysis Dashboard")
 
-st.subheader("Select Location and Draw Area on Map")
-m = folium.Map(location=[lat, lon], zoom_start=6, tiles=None)
-folium.TileLayer('Esri.WorldImagery', name='Satellite', attr="Esri").add_to(m)
+st.markdown("#### Map: Select Location & Draw Area for Optional Area-Based Sizing")
+m = folium.Map(location=[lat, lon], zoom_start=6)
+folium.TileLayer('OpenStreetMap', name='OSM (default)').add_to(m)
+folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
 Draw(export=True, filename="data.json").add_to(m)
+folium.LayerControl().add_to(m)
 map_data = st_folium(m, width=700, height=500)
 
 if 'last_clicked' in map_data and map_data['last_clicked'] is not None:
@@ -301,46 +315,56 @@ if 'all_drawings' in map_data and map_data['all_drawings'] is not None:
             latlon_list = [(c[1], c[0]) for c in coords]
             polygon_area = compute_area_of_polygon(latlon_list)
 
-st.write(f"Chosen Location: Latitude={lat:.6f}, Longitude={lon:.6f}, Altitude={alt} m")
+st.write(f"**Chosen Location:** Latitude={lat:.6f}, Longitude={lon:.6f}, Altitude={alt} m")
 if polygon_area > 0:
-    st.write(f"Drawn Polygon Area: {polygon_area:.2f} m²")
+    st.write(f"**Drawn Polygon Area:** {polygon_area:.2f} m²")
 
 try:
     with st.spinner("Fetching weather data from NREL..."):
-        # Removed 'surface_pressure' from attributes because it may not be supported in all endpoints
         weather, metadata = get_psm3_data(lat, lon, NREL_API_KEY, email, names="2019", interval=60,
-                                          attributes=('air_temperature', 'dew_point', 'dhi', 'dni', 'ghi', 'surface_albedo',
-                                                      'pressure', 'wind_direction', 'wind_speed'))
+                                          attributes=('air_temperature','dew_point','dhi','dni','ghi','surface_albedo','surface_pressure','wind_direction','wind_speed'))
 except Exception as e:
     st.error(f"Error fetching weather data: {e}")
     st.stop()
 
+required_cols = ['ghi', 'dni', 'dhi']
+for c in required_cols:
+    if c not in weather.columns:
+        st.error(f"Missing essential weather data: {c}. Cannot proceed.")
+        st.stop()
+
+if 'temp_air' not in weather.columns:
+    weather['temp_air'] = 25.0
+if 'wind_speed' not in weather.columns:
+    weather['wind_speed'] = 1.0
+if 'surface_pressure' not in weather.columns:
+    pressure_value = 101325
+else:
+    pressure_value = weather['surface_pressure']*100
+
 module = mod_db[module_name].to_dict()
 inverter = inv_db[inverter_name].to_dict()
 
-# If area is drawn, compute area-based system size
 if polygon_area > 0:
     module_area = module['Area']
     possible_modules = math.floor((polygon_area * packing_factor) / module_area)
     system_size_w_area = possible_modules * (module['Vmpo'] * module['Impo'])
     system_size_kw_area = system_size_w_area / 1000
-    # Let user choose final sizing method if area is available
-    sizing_method = st.radio("Select Final Sizing Method", ["Manual", "Area-based"], index=0)
+    sizing_method = st.sidebar.radio("Select Final Sizing Method", ["Manual", "Area-based"], index=0)
     if sizing_method == "Area-based":
         system_size_kw = system_size_kw_area
     else:
         system_size_kw = manual_system_size_kw
-    st.write(f"Manual Size Input: {manual_system_size_kw:.2f} kW")
-    st.write(f"Area-based Size: {system_size_kw_area:.2f} kW (from {possible_modules} modules)")
+
+    st.sidebar.write(f"**Manual Size Input:** {manual_system_size_kw:.2f} kW")
+    st.sidebar.write(f"**Area-based Size:** {system_size_kw_area:.2f} kW (from {possible_modules} modules)")
 else:
-    # If no area, just use manual
     system_size_kw = manual_system_size_kw
-    st.write(f"No area drawn. Using manual system size: {system_size_kw:.2f} kW")
+    st.sidebar.write(f"No area drawn. Using manual system size: {system_size_kw:.2f} kW")
 
 system_size_mw = system_size_kw/1000
 
 def calculate_cell_temp_pvsyst(poa_global, temp_air, wind_speed, u_c, u_v):
-    # PVsyst formula: Tmod = Tair + (poa_global * (u_c + u_v * wind_speed)/800)
     return temp_air + (poa_global * (u_c + u_v*wind_speed)/800)
 
 def get_cell_temperature(env_data, weather, params):
@@ -350,9 +374,9 @@ def get_cell_temperature(env_data, weather, params):
         return pvlib.temperature.sapm_cell(poa_global=env_data['poa_global'],
                                            temp_air=weather['temp_air'],
                                            wind_speed=weather['wind_speed'],
-                                           a=params['a'],
-                                           b=params['b'],
-                                           deltaT=params['deltaT'])
+                                           a=params.get('a', -3.56),
+                                           b=params.get('b', -0.075),
+                                           deltaT=params.get('deltaT',3))
 
 min_db_temp_ashrae = -3.7
 max_db_temp_ashrae = 36.6
@@ -407,26 +431,34 @@ env_data = pvlib.irradiance.get_total_irradiance(surface_tilt=surface_tilt,
                                                  dhi=weather['dhi'], dni_extra=sol_data['dni_extra'], model='haydavies')
 env_data['aoi'] = pvlib.irradiance.aoi(surface_tilt, surface_azimuth, sol_data['apparent_zenith'], sol_data['azimuth'])
 env_data['airmass'] = pvlib.atmosphere.get_relative_airmass(zenith=sol_data['apparent_zenith'])
-# Use weather['pressure'] (correct variable) instead of surface_pressure
-env_data['am_abs'] = pvlib.atmosphere.get_absolute_airmass(env_data['airmass'], pressure=(weather['pressure']*100))
+am_abs = pvlib.atmosphere.get_absolute_airmass(env_data['airmass'], pressure=pressure_value)
+env_data['am_abs'] = am_abs
 
 weather['cell_temperature'] = get_cell_temperature(env_data, weather, temperature_model_parameters)
-weather['effective_irradiance'] = pvlib.pvsystem.sapm_effective_irradiance(
+weather['effective_irradiance'] = pvsystem.sapm_effective_irradiance(
     poa_direct=env_data['poa_direct'],
     poa_diffuse=env_data['poa_diffuse'],
     airmass_absolute=env_data['am_abs'], 
     aoi=env_data['aoi'], module=module
 )
 
-system_obj = pvlib.pvsystem.PVSystem(
-    arrays=None, surface_tilt=surface_tilt, surface_azimuth=surface_azimuth, 
-    albedo=0.2, module_parameters=module, 
-    inverter_parameters=inverter,
-    racking_model='open_rack', losses_parameters=total_loss,
-    modules_per_string=no_of_series_module, strings_per_inverter=max_parallel_string
+mount = pvsystem.FixedMount(surface_tilt=surface_tilt, surface_azimuth=surface_azimuth, racking_model='open_rack')
+array = pvsystem.Array(
+    mount=mount,
+    module_parameters=module,
+    temperature_model_parameters=temperature_model_parameters,
+    modules_per_string=no_of_series_module,
+    strings=max_parallel_string
 )
 
-mc = pvlib.modelchain.ModelChain(system_obj, location_obj, losses_model='pvwatts')
+system_obj = pvsystem.PVSystem(
+    arrays=[array],
+    inverter_parameters=inverter,
+    losses_parameters=total_loss,
+    albedo=0.2
+)
+
+mc = modelchain.ModelChain(system_obj, location_obj, losses_model='pvwatts')
 mc.run_model_from_effective_irradiance(weather)
 ac_result=mc.results.ac.copy()
 ac_result[ac_result<0]=0
@@ -465,30 +497,32 @@ with tab1:
     if st.checkbox('Show raw weather data'):
         st.dataframe(weather)
     monthly_ghi = weather['ghi'].resample('M').sum()
-    ghi_chart = alt.Chart(monthly_ghi.reset_index()).mark_line(point=True).encode(
+    # Use altair_plot instead of alt
+    ghi_df = monthly_ghi.reset_index()
+    ghi_chart = altair_plot.Chart(ghi_df).mark_line(point=True).encode(
         x='index:T', y='ghi:Q'
     ).properties(title='Monthly GHI')
     st.altair_chart(ghi_chart, use_container_width=True)
 
 with tab2:
-    st.write(f"Final System Size Used: {system_size_kw:.2f} kW (DC)")
-    st.write(f"Modules in series: {no_of_series_module}")
-    st.write(f"Strings per inverter: {max_parallel_string}")
-    st.write(f"Inverters needed: {number_of_inverters_needed}")
-    st.write(f"Total DC Size: {total_DC_system_size/1e6:.2f} MW")
-    st.write(f"Total AC Size: {total_AC_system_size/1e6:.2f} MW")
-    st.write(f"DC/AC Ratio: {dc_ac_ratio:.2f}")
+    st.write(f"**Final System Size Used:** {system_size_kw:.2f} kW (DC)")
+    st.write(f"**Modules in series:** {no_of_series_module}")
+    st.write(f"**Strings per inverter:** {max_parallel_string}")
+    st.write(f"**Inverters needed:** {number_of_inverters_needed}")
+    st.write(f"**Total DC Size:** {total_DC_system_size/1e6:.2f} MW")
+    st.write(f"**Total AC Size:** {total_AC_system_size/1e6:.2f} MW")
+    st.write(f"**DC/AC Ratio:** {dc_ac_ratio:.2f}")
     if polygon_area > 0:
-        st.write(f"Based on drawn area, approx. {possible_modules} modules fit.")
+        st.write(f"Approx. {possible_modules} modules fit in drawn area.")
         st.write(f"Area-based Size: {system_size_kw_area:.2f} kW")
         st.write(f"Manual Input Size: {manual_system_size_kw:.2f} kW")
-    st.write(f"System Type: {system_type}")
-    st.write(f"Temperature Model Family: {model_family}")
-    st.write("Selected Temperature Model Parameters:")
+    st.write(f"**System Type:** {system_type}")
+    st.write(f"**Temperature Model Family:** {model_family}")
+    st.write("**Selected Temperature Model Parameters:**")
     st.write(temperature_model_parameters)
 
 with tab3:
-    st.write("**Financial Summary**")
+    st.subheader("Financial Summary")
     st.write(f"Total Capital Cost: {Total_Capital_Cost:,.0f} {currency}")
     st.write(f"Utility Energy Cost LCC: {Utility_energy_cost_LCC:,.0f} {currency}")
     st.write(f"PV Life Cycle Cost: {PV_Life_cycle_cost:,.0f} {currency}")
@@ -501,10 +535,12 @@ with tab3:
     st.write(f"Net Present Value (NPV): {npv_val:,.0f} {currency}")
 
 with tab4:
+    st.subheader("Performance Analysis")
     monthly_prod = (energy_production_kW.resample('M').sum())
-    monthly_chart = alt.Chart(monthly_prod.reset_index()).mark_bar().encode(
-        x=alt.X('index:T', title='Month'),
-        y=alt.Y('ac', title='Energy (kWh)'),
+    monthly_prod_df = monthly_prod.reset_index()
+    monthly_chart = altair_plot.Chart(monthly_prod_df).mark_bar().encode(
+        x=altair_plot.X('index:T', title='Month'),
+        y=altair_plot.Y('energy_production_kW:O', title='Energy (kWh)'),
     ).properties(title='Monthly Energy Production')
     st.altair_chart(monthly_chart, use_container_width=True)
 
@@ -521,4 +557,4 @@ with tab4:
     st.write(f"Capacity Factor (%): {Capacity_Factor*100:.2f}")
 
 st.markdown("---")
-st.write("**Note:** This is a demonstration tool. Adjust inputs as needed for accurate and region-specific analysis. Powered by pvlib Python.")
+st.write("**Note:** This is a demonstration tool. Adjust inputs and location as needed. Powered by pvlib Python.")
