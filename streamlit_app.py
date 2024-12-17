@@ -201,7 +201,7 @@ def get_default_electricity_rate(lat, lon):
 
 st.sidebar.title("User Inputs")
 
-region = st.sidebar.selectbox("Select Region", ["Bangladesh", "USA"])
+region = st.sidebar.selectbox("Select Region", ["World", "Bangladesh"])
 if region == "Bangladesh":
     default_lat = 23.8103
     default_lon = 90.4125
@@ -212,8 +212,8 @@ if region == "Bangladesh":
     lon = default_lon
     currency = default_currency
 else:
-    default_lat = 30.2672
-    default_lon = -97.7431
+    default_lat = 30.2241
+    default_lon = -92.0198
     default_currency = "USD"
     default_installed_cost_usd = 6000.0
     default_elec_rate = def_elec_rate_us
@@ -233,6 +233,7 @@ with st.sidebar.expander("Location and Weather Options", expanded=True):
 with st.sidebar.expander("System Type & Temperature Model", expanded=True):
     system_type = st.selectbox("System Type", ["Ground-mounted PV", "Roof-based PV", "Floating Solar", "Agrivoltaics"])
 
+    # Set defaults based on system type
     if system_type == "Ground-mounted PV":
         default_model_family = 'sapm'
         default_sapm_key = 'open_rack_glass_polymer'
@@ -257,12 +258,18 @@ with st.sidebar.expander("System Type & Temperature Model", expanded=True):
             sapm_index = len(sapm_keys)-1
         selected_sapm_key = st.selectbox("SAPM Model", sapm_keys, index=sapm_index)
         if selected_sapm_key == "Custom SAPM":
+            # User enters a,b,deltaT directly
             a = st.number_input('a', value=-3.56)
             b = st.number_input('b', value=-0.075)
             deltaT = st.number_input('deltaT', value=3)
             temperature_model_parameters = {'a': a, 'b': b, 'deltaT': deltaT}
         else:
-            temperature_model_parameters = TEMPERATURE_MODEL_PARAMETERS['sapm'][selected_sapm_key]
+            # Load defaults from chosen model, but still allow user to adjust
+            default_params = TEMPERATURE_MODEL_PARAMETERS['sapm'][selected_sapm_key]
+            a = st.number_input('a', value=default_params['a'])
+            b = st.number_input('b', value=default_params['b'])
+            deltaT = st.number_input('deltaT', value=default_params['deltaT'])
+            temperature_model_parameters = {'a': a, 'b': b, 'deltaT': deltaT}
 
     elif model_family == 'pvsyst':
         pvsyst_keys = list(TEMPERATURE_MODEL_PARAMETERS['pvsyst'].keys())
@@ -273,14 +280,20 @@ with st.sidebar.expander("System Type & Temperature Model", expanded=True):
             u_v = st.number_input('u_v', value=0.0)
             temperature_model_parameters = {'u_c': u_c, 'u_v': u_v, 'model': 'pvsyst'}
         else:
-            parameters = TEMPERATURE_MODEL_PARAMETERS['pvsyst'][selected_pvsyst_key]
-            temperature_model_parameters = {'u_c': parameters['u_c'], 'u_v': parameters['u_v'], 'model': 'pvsyst'}
+            # Load defaults, allow adjustments
+            default_params = TEMPERATURE_MODEL_PARAMETERS['pvsyst'][selected_pvsyst_key]
+            u_c = st.number_input('u_c', value=default_params['u_c'])
+            u_v = st.number_input('u_v', value=default_params['u_v'])
+            temperature_model_parameters = {'u_c': u_c, 'u_v': u_v, 'model': 'pvsyst'}
 
     else:
+        # Custom model - user sets all
         a = st.number_input('a', value=-3.56)
         b = st.number_input('b', value=-0.075)
         deltaT = st.number_input('deltaT', value=3)
         temperature_model_parameters = {'a': a, 'b': b, 'deltaT': deltaT, 'model': 'custom'}
+
+
 
 with st.sidebar.expander("System Configuration", expanded=True):
     sizing_method = st.radio("Sizing Method", ["Manual", "Area-based"])
@@ -322,8 +335,12 @@ st.markdown("## PV System Analysis")
 st.markdown("Use the sidebar to configure your parameters. If using Area-based sizing, draw a polygon on the map below.")
 
 st.markdown("#### Map: Select Location & Draw Area")
-m = folium.Map(location=[lat, lon], zoom_start=6, tiles='OpenStreetMap')
-folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
+m = folium.Map(location=[lat, lon], zoom_start=10)
+#folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
+from folium import plugins
+minimap = plugins.MiniMap()
+m.add_child(minimap)
+
 Draw(export=True, filename="data.json").add_to(m)
 folium.LayerControl().add_to(m)
 map_data = st_folium(m, width=700, height=500)
@@ -516,7 +533,7 @@ co2_savings_tons = annual_energy_production_kWh * 0.7 / 1000
 st.markdown("### Key Performance Indicators")
 col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Annual Generation (kWh)", f"{annual_energy_production_kWh:,.0f}")
-col2.metric("Annual Savings", f"{annual_savings:,.0f} {currency}")
+col2.metric(f"Annual Savings ({currency})", f"{annual_savings:,.0f}")
 col3.metric("Payback (yrs)", f"{payback:.2f}")
 col4.metric("LCOE ($/kWh)", f"{LCOE:.3f}")
 col5.metric("CO2 Savings (tons/yr)", f"{co2_savings_tons:.2f}")
