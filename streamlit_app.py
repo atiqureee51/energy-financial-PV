@@ -337,6 +337,11 @@ st.markdown("Use the sidebar to configure your parameters. If using Area-based s
 
 st.markdown("#### Map: Select Location & Draw Area")
 m = folium.Map(location=[lat, lon], zoom_start=10)
+#folium.TileLayer('Esri.WorldImagery', name='Satellite Imagery', attr="Esri").add_to(m)
+from folium import plugins
+minimap = plugins.MiniMap()
+m.add_child(minimap)
+
 Draw(export=True, filename="data.json").add_to(m)
 folium.LayerControl().add_to(m)
 map_data = st_folium(m, width=700, height=500)
