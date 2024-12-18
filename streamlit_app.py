@@ -332,7 +332,7 @@ with st.sidebar.expander("Electricity Rate", expanded=True):
     adjusted_default_rate = get_default_electricity_rate(lat, lon)*cur_factor
     electricity_rate = st.number_input('Electricity Rate ($/kWh)', value=adjusted_default_rate)
 
-st.markdown("## PV System Analysis")
+st.markdown("## Worldwide PV System Techno-Economic-Environmental Analysis")
 st.markdown("Use the sidebar to configure your parameters. If using Area-based sizing, draw a polygon on the map below.")
 
 st.markdown("#### Map: Select Location & Draw Area")
