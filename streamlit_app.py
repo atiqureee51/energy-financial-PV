@@ -562,6 +562,7 @@ col3.metric("Payback (yrs)", f"{payback:.2f}")
 col4.metric("LCOE ($/kWh)", f"{LCOE:.3f}")
 col5.metric("CO2 Savings (tons/yr)", f"{co2_savings_tons:.2f}")
 
+
 from ydata_profiling import ProfileReport
 from streamlit_pandas_profiling import st_profile_report
 
@@ -585,8 +586,9 @@ with tab1:
         tooltip=['index:T','ghi:Q']
     ).properties(title='Monthly GHI').interactive()
     st.altair_chart(ghi_chart, use_container_width=True)
-    pr=ProfileReport(weather)
-    st_profile_report(pr)
+    if st.checkbox('Generate Profile Report of Raw Weather Data'):   
+        pr=ProfileReport(weather)
+        st_profile_report(pr)
     
 with tab2:
     #elif tab_option == "System Design":
